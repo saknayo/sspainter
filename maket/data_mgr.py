@@ -5,7 +5,7 @@ from source_mgr import SourceMgr
 
 # 数据库文件路径
 DB_FILE = "stock_data.db"
-SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume']  # 基础特征+技术指标[8]
+SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'src']  # 基础特征+技术指标[8]
 
 class DataMgr:
     def __init__(self, share_source='AK', fund_source=''):
