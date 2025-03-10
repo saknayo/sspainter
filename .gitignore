@@ -1,3 +1,10 @@
-Release/*
-__pycache__/*
-results/*
+# 忽略 Python 中间件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略 .db 文件
+*.db
+
+# 忽略 .csv 文件
+*.csv
