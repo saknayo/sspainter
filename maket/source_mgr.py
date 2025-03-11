@@ -1,10 +1,13 @@
 from share.akshare_source import AkShareAdapter
+from fund.akshare_source import AkFundAdapter
 
 class SourceMgr:
     _share_source_adapter = {
         'AK' : AkShareAdapter,
     }
-    _fund_source_adapter = {}
+    _fund_source_adapter = {
+        'AK' : AkFundAdapter,
+    }
 
     @classmethod
     def get_share_source_adapter(cls, source_type):
