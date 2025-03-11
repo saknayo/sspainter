@@ -1,5 +1,5 @@
-from share.akshare_source import AkShareAdapter
-from fund.akshare_source import AkFundAdapter
+from share.ak_share import AkShareAdapter
+from fund.ak_fund import AkFundAdapter
 
 class SourceMgr:
     _share_source_adapter = {
@@ -19,5 +19,8 @@ class SourceMgr:
 
 if __name__ == '__main__':
     adapter = SourceMgr.get_share_source_adapter('AK')
-    data = adapter.fecth_daily_data(symbol="688053")
+    data = adapter.fetch_daily_data(symbol="688053")
+    print(data)
+    adapter = SourceMgr.get_fund_source_adapter('AK')
+    data = adapter.fetch_daily_data(symbol="005827")
     print(data)

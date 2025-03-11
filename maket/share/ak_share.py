@@ -19,7 +19,7 @@ class AkShareAdapter:
         df["symbol"] = symbol
         df["src"] = "AK"
     
-    def fecth_daily_data(self, symbol: str, start_date: str = "20010101", end_date: str = "", adjust = 'hfq'):
+    def fetch_daily_data(self, symbol: str, start_date: str = "20010101", end_date: str = "", adjust = 'hfq'):
         """
         获取股票日频数据并格式化成以下格式
                 "日期": "date",
@@ -53,5 +53,5 @@ class AkShareAdapter:
 
 if __name__ == "__main__":
     aj = AkShareAdapter()
-    data = aj.fecth_daily_data(symbol="688053")
+    data = aj.fetch_daily_data(symbol="688053")
     print(data)

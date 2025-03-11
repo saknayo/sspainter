@@ -6,6 +6,7 @@ from source_mgr import SourceMgr
 # 数据库文件路径
 DEFAULT_SHARE_DB_FILE = "share_data.db"
 SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'src']  # 基础特征+技术指标[8]
+FUND_FEATURES = ['date', 'symbol', 'nav', 'src']  # 基础特征+技术指标[8]
 
 class DataMgr:
     def __init__(self, share_source='AK', fund_source='AK', db_file=''):
@@ -16,6 +17,10 @@ class DataMgr:
         self._dbt = {
             'share' : 'stock_daily',
             'fund' : 'fund_daily',
+        }
+        self._ft = {
+            'share' : SHARE_FEATURES,
+            'fund' : FUND_FEATURES,
         }
         self.init_share_db()
         self.init_fund_db()
@@ -49,12 +54,11 @@ class DataMgr:
         """初始化数据库，创建表"""
         with sqlite3.connect(self._dbf) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
+            cursor.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self._dbt['fund']} (
                     symbol TEXT,
                     date TEXT,
                     nav REAL,
-                    acc_nav REAL,
                     src TEXT,
                     PRIMARY KEY (symbol, date)
                 )
@@ -71,7 +75,7 @@ class DataMgr:
         print(f"Querying database for Symbol: {symbol}, Start Date: {start_date}, End Date: {end_date}")
         
         with sqlite3.connect(self._dbf) as conn:
-            query = """
+            query = f"""
                 SELECT * FROM {self._dbt[t]} 
                 WHERE symbol = ? AND date BETWEEN ? AND ?
             """
@@ -88,17 +92,18 @@ class DataMgr:
         with sqlite3.connect(self._dbf) as conn:
             # 检查是否已经存在相同 symbol 和 date 的记录
             existing_dates = pd.read_sql_query(
-                "SELECT date FROM {self._dbt[t]} WHERE symbol = ?", 
+                f"SELECT date FROM {self._dbt[t]} WHERE symbol = ?", 
                 conn, params=(symbol,)
             )["date"].tolist()
             
             # 过滤掉已经存在的数据
             data_to_insert = data[~data["date"].isin(existing_dates)]
-            data_to_insert = data_to_insert[SHARE_FEATURES] # 筛选出数据库特征数据
+            print(data_to_insert)
+            data_to_insert = data_to_insert[self._ft[t]] # 筛选出数据库特征数据
         
             # 如果还有新数据，插入到数据库
             if not data_to_insert.empty:
-                data_to_insert.to_sql("stock_daily", conn, if_exists="append", index=False)
+                data_to_insert.to_sql(self._dbt[t], conn, if_exists="append", index=False)
                 print(f"Inserted {len(data_to_insert)} new records into the database.")
             else:
                 print("No new records to insert.")
@@ -124,7 +129,7 @@ class DataMgr:
             # 如果数据库中的最新日期小于 end_date，从 akshare 获取缺失的数据
             print(f"Data found in local database, but missing data from {latest_date_in_db} to {end_date}.")
             missing_start_date = (pd.to_datetime(latest_date_in_db) + pd.Timedelta(days=1)).strftime("%Y%m%d")
-            missing_data = self.adapters[t].fecth_daily_data(symbol=symbol, start_date=missing_start_date, end_date=end_date)
+            missing_data = self.adapters[t].fetch_daily_data(symbol=symbol, start_date=missing_start_date, end_date=end_date)
             
             # 添加股票代码列
             missing_data["symbol"] = symbol
@@ -139,7 +144,7 @@ class DataMgr:
         else:
             # 如果数据库中没有数据，从 akshare 获取全部数据
             print("No data found in local database. Fetching all data from akshare...")
-            stock_data = self.adapters[t].fecth_daily_data(symbol=symbol, start_date=start_date, end_date=end_date)
+            stock_data = self.adapters[t].fetch_daily_data(symbol=symbol, start_date=start_date, end_date=end_date)
             
             # 添加股票代码列
             stock_data["symbol"] = symbol
