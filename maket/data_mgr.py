@@ -4,19 +4,29 @@ from datetime import datetime
 from source_mgr import SourceMgr
 
 # 数据库文件路径
-DB_FILE = "stock_data.db"
+SHARE_DB_FILE = "stock_data.db"
+FUND_DB_FILE = "fund_data.db"
 SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'src']  # 基础特征+技术指标[8]
 
 class DataMgr:
-    def __init__(self, share_source='AK', fund_source=''):
-        self.share_adapter = SourceMgr.get_share_source_adapter(share_source)
+    def __init__(self, share_source='AK', fund_source='AK'):
+        self.adapters = { 
+            'share' : SourceMgr.get_share_source_adapter(share_source),
+            'fund' : SourceMgr.get_fund_source_adapter(fund_source), }
+        self._dbf = {
+            'share' : SHARE_DB_FILE,
+            'fund' : FUND_DB_FILE,
+        }
+        self.init_share_db()
+        self.init_fund_db()
+
     def trans_date(self, unstrip_data):
         # 将日期格式从 YYYYMMDD 转换为 YYYY-MM-DD
         return f"{unstrip_data[:4]}-{unstrip_data[4:6]}-{unstrip_data[6:8]}"
 
-    def init_db(self):
+    def init_share_db(self):
         """初始化数据库，创建表"""
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(self._dbf['share']) as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS stock_daily (
@@ -28,12 +38,30 @@ class DataMgr:
                     close REAL,
                     volume REAL,
                     amount REAL,
+                    src TEXT,
                     PRIMARY KEY (symbol, date)
                 )
             """)
             conn.commit()
 
-    def fetch_data_from_db(self, symbol, start_date, end_date):
+
+    def init_fund_db(self):
+        """初始化数据库，创建表"""
+        with sqlite3.connect(self._dbf['fund']) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS stock_daily (
+                    symbol TEXT,
+                    date TEXT,
+                    nav REAL,
+                    acc_nav REAL,
+                    src TEXT,
+                    PRIMARY KEY (symbol, date)
+                )
+            """)
+            conn.commit()
+
+    def fetch_data_from_db(self, t, symbol, start_date, end_date):
         """从本地数据库获取数据"""
         # 将日期格式从 YYYYMMDD 转换为 YYYY-MM-DD
         start_date = self.trans_date(start_date)
@@ -42,7 +70,7 @@ class DataMgr:
         # 打印调试信息
         print(f"Querying database for Symbol: {symbol}, Start Date: {start_date}, End Date: {end_date}")
         
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(self._dbf[t]) as conn:
             query = """
                 SELECT * FROM stock_daily
                 WHERE symbol = ? AND date BETWEEN ? AND ?
@@ -53,11 +81,11 @@ class DataMgr:
         print(f"Query result: {len(df)} records found.")
         return df
 
-    def save_data_to_db(self, symbol, data):
+    def save_data_to_db(self, t, symbol, data):
         if data.empty:
             return
         """将数据保存到本地数据库，避免重复插入"""
-        with sqlite3.connect(DB_FILE) as conn:
+        with sqlite3.connect(self._dbf[t]) as conn:
             # 检查是否已经存在相同 symbol 和 date 的记录
             existing_dates = pd.read_sql_query(
                 "SELECT date FROM stock_daily WHERE symbol = ?", 
@@ -75,14 +103,14 @@ class DataMgr:
             else:
                 print("No new records to insert.")
 
-    def fetch_daily_stock_data(self, symbol, start_date, end_date):
+    def fetch_daily_stock_data(self, t, symbol, start_date, end_date):
         """
         获取股票每日数据，优先从本地数据库读取
         - 如果数据库中的数据的最新日期等于 end_date，则直接返回数据库中的数据。
         - 如果数据库中的数据的最新日期小于 end_date，则从 akshare 获取缺失的数据。
         """
         # 从数据库查询数据
-        db_data = self.fetch_data_from_db(symbol, start_date, end_date)
+        db_data = self.fetch_data_from_db(t, symbol, start_date, end_date)
         
         if not db_data.empty:
             # 获取数据库中的最新日期
@@ -96,13 +124,13 @@ class DataMgr:
             # 如果数据库中的最新日期小于 end_date，从 akshare 获取缺失的数据
             print(f"Data found in local database, but missing data from {latest_date_in_db} to {end_date}.")
             missing_start_date = (pd.to_datetime(latest_date_in_db) + pd.Timedelta(days=1)).strftime("%Y%m%d")
-            missing_data = self.share_adapter.fecth_daily_data(symbol=symbol, start_date=missing_start_date, end_date=end_date)
+            missing_data = self.adapters[t].fecth_daily_data(symbol=symbol, start_date=missing_start_date, end_date=end_date)
             
             # 添加股票代码列
             missing_data["symbol"] = symbol
             
             # 保存新数据到数据库
-            self.save_data_to_db(symbol, missing_data)
+            self.save_data_to_db(t, symbol, missing_data)
             
             # 合并数据库数据和从 akshare 获取的数据
             combined_data = pd.concat([db_data, missing_data], ignore_index=True)
@@ -111,28 +139,25 @@ class DataMgr:
         else:
             # 如果数据库中没有数据，从 akshare 获取全部数据
             print("No data found in local database. Fetching all data from akshare...")
-            stock_data = self.share_adapter.fecth_daily_data(symbol=symbol, start_date=start_date, end_date=end_date)
+            stock_data = self.adapters[t].fecth_daily_data(symbol=symbol, start_date=start_date, end_date=end_date)
             
             # 添加股票代码列
             stock_data["symbol"] = symbol
             
             # 保存数据到数据库
-            self.save_data_to_db(symbol, stock_data)
+            self.save_data_to_db(t, symbol, stock_data)
             
             return stock_data
 
 if __name__ == "__main__":
     dm = DataMgr()
-    # 初始化数据库
-    dm.init_db()
-    
     # 示例：获取股票数据
     symbol = "688053"  # 股票代码
     start_date = "20230101"  # 开始日期
     end_date = "20231230"  # 结束日期
     
     # 获取数据
-    data = dm.fetch_daily_stock_data(symbol, start_date, end_date)
+    data = dm.fetch_daily_stock_data('share', symbol, start_date, end_date)
     
     # 打印数据
     print(data)
