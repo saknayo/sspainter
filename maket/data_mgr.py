@@ -4,18 +4,18 @@ from datetime import datetime
 from source_mgr import SourceMgr
 
 # 数据库文件路径
-SHARE_DB_FILE = "stock_data.db"
-FUND_DB_FILE = "fund_data.db"
+DEFAULT_SHARE_DB_FILE = "share_data.db"
 SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'src']  # 基础特征+技术指标[8]
 
 class DataMgr:
-    def __init__(self, share_source='AK', fund_source='AK'):
+    def __init__(self, share_source='AK', fund_source='AK', db_file=''):
         self.adapters = { 
             'share' : SourceMgr.get_share_source_adapter(share_source),
             'fund' : SourceMgr.get_fund_source_adapter(fund_source), }
-        self._dbf = {
-            'share' : SHARE_DB_FILE,
-            'fund' : FUND_DB_FILE,
+        self._dbf = DEFAULT_SHARE_DB_FILE if db_file == '' else db_file
+        self._dbt = {
+            'share' : 'stock_daily',
+            'fund' : 'fund_daily',
         }
         self.init_share_db()
         self.init_fund_db()
@@ -26,10 +26,10 @@ class DataMgr:
 
     def init_share_db(self):
         """初始化数据库，创建表"""
-        with sqlite3.connect(self._dbf['share']) as conn:
+        with sqlite3.connect(self._dbf) as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS stock_daily (
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS {self._dbt['share']}(
                     symbol TEXT,
                     date TEXT,
                     open REAL,
@@ -47,10 +47,10 @@ class DataMgr:
 
     def init_fund_db(self):
         """初始化数据库，创建表"""
-        with sqlite3.connect(self._dbf['fund']) as conn:
+        with sqlite3.connect(self._dbf) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS stock_daily (
+                CREATE TABLE IF NOT EXISTS {self._dbt['fund']} (
                     symbol TEXT,
                     date TEXT,
                     nav REAL,
@@ -70,9 +70,9 @@ class DataMgr:
         # 打印调试信息
         print(f"Querying database for Symbol: {symbol}, Start Date: {start_date}, End Date: {end_date}")
         
-        with sqlite3.connect(self._dbf[t]) as conn:
+        with sqlite3.connect(self._dbf) as conn:
             query = """
-                SELECT * FROM stock_daily
+                SELECT * FROM {self._dbt[t]} 
                 WHERE symbol = ? AND date BETWEEN ? AND ?
             """
             df = pd.read_sql_query(query, conn, params=(symbol, start_date, end_date))
@@ -85,10 +85,10 @@ class DataMgr:
         if data.empty:
             return
         """将数据保存到本地数据库，避免重复插入"""
-        with sqlite3.connect(self._dbf[t]) as conn:
+        with sqlite3.connect(self._dbf) as conn:
             # 检查是否已经存在相同 symbol 和 date 的记录
             existing_dates = pd.read_sql_query(
-                "SELECT date FROM stock_daily WHERE symbol = ?", 
+                "SELECT date FROM {self._dbt[t]} WHERE symbol = ?", 
                 conn, params=(symbol,)
             )["date"].tolist()
             
@@ -155,9 +155,13 @@ if __name__ == "__main__":
     symbol = "688053"  # 股票代码
     start_date = "20230101"  # 开始日期
     end_date = "20231230"  # 结束日期
-    
     # 获取数据
     data = dm.fetch_daily_stock_data('share', symbol, start_date, end_date)
-    
+    # 打印数据
+    print(data)
+
+    symbol = "005827"  # 股票代码
+    # 获取数据
+    data = dm.fetch_daily_stock_data('fund', symbol, start_date, end_date)
     # 打印数据
     print(data)
