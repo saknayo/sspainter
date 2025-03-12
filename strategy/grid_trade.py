@@ -3,30 +3,45 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class GridTradingStrategy:
-    def __init__(self, data, initial_capital=100000):
+    def __init__(self,
+        grid_num=15,
+        lower_bound=25,
+        upper_bound=35,
+        order_percent=0.08,
+        max_position=1000):
         """
         网格交易策略
         :param data: 包含价格数据的DataFrame（需包含'close'列）
         :param initial_capital: 初始资金（默认10万）
         """
-        self.data = data
-        self.initial_capital = initial_capital
+        self.data = None
+        self.initial_capital = 0
         self.positions = []  # 记录所有交易
         self.current_cash = initial_capital
         self.current_holdings = 0  # 当前持有数量
         
         # 策略参数
         self.grid_params = {
-            'grid_num': 10,        # 网格数量
-            'lower_bound': 28.0,   # 价格下限
-            'upper_bound': 32.0,   # 价格上限
-            'order_percent': 0.1,  # 每格交易资金比例
-            'max_position': 1000    # 最大持仓限制
+            'grid_num': grid_num,        # 网格数量
+            'lower_bound': lower_bound,   # 价格下限
+            'upper_bound': upper_bound,   # 价格上限
+            'order_percent': order_percent,  # 每格交易资金比例
+            'max_position': max_position # 最大持仓限制
         }
         
         # 生成网格区间
         self.generate_grid_levels()
     
+    def set_initial_state(self, initial_capital, current_cash, current_holdings):
+        self.initial_capital = initial_capital
+        self.current_cash = current_cash 
+        self.current_holdings = current_holdings  # 当前持有数量
+
+    def reset_state(self):
+        self.set_initial_state(0, 0, 0)
+        self.positions = []  # clear trade records
+        self.data = None
+
     def generate_grid_levels(self):
         """生成网格价格区间"""
         price_range = np.linspace(
@@ -41,46 +56,50 @@ class GridTradingStrategy:
         """计算单次交易数量"""
         return (self.initial_capital * self.grid_params['order_percent']) / price
     
-    def execute_strategy(self):
+    def execute_strategy(self, current_date, current_price):
         """执行策略"""
-        for idx, row in self.data.iterrows():
-            current_price = row['close']
-            
-            # 检查每个网格线
-            for level in self.grid_levels:
-                # 买入条件：价格低于网格线且未持仓
-                if current_price <= level and self.current_holdings < self.grid_params['max_position']:
-                    order_qty = min(
-                        self.calculate_order_size(current_price),
-                        self.grid_params['max_position'] - self.current_holdings
-                    )
-                    cost = order_qty * current_price
-                    if cost <= self.current_cash:
-                        self.current_cash -= cost
-                        self.current_holdings += order_qty
-                        self.positions.append({
-                            'date': idx,
-                            'price': current_price,
-                            'quantity': order_qty,
-                            'type': 'BUY'
-                        })
-                
-                # 卖出条件：价格高于网格线且有持仓
-                if current_price >= level and self.current_holdings > 0:
-                    sell_qty = min(
-                        self.calculate_order_size(current_price),
-                        self.current_holdings
-                    )
-                    proceeds = sell_qty * current_price
-                    self.current_cash += proceeds
-                    self.current_holdings -= sell_qty
+        #current_price = row['close']
+        
+        # 检查每个网格线
+        for level in self.grid_levels:
+            # 买入条件：价格低于网格线且未持仓
+            if current_price <= level and self.current_holdings < self.grid_params['max_position']:
+                order_qty = min(
+                    self.calculate_order_size(current_price),
+                    self.grid_params['max_position'] - self.current_holdings
+                )
+                cost = order_qty * current_price
+                if cost <= self.current_cash:
+                    self.current_cash -= cost
+                    self.current_holdings += order_qty
                     self.positions.append({
-                        'date': idx,
+                        'date': current_date,
                         'price': current_price,
-                        'quantity': sell_qty,
-                        'type': 'SELL'
+                        'quantity': order_qty,
+                        'type': 'BUY'
                     })
-    
+            
+            # 卖出条件：价格高于网格线且有持仓
+            if current_price >= level and self.current_holdings > 0:
+                sell_qty = min(
+                    self.calculate_order_size(current_price),
+                    self.current_holdings
+                )
+                proceeds = sell_qty * current_price
+                self.current_cash += proceeds
+                self.current_holdings -= sell_qty
+                self.positions.append({
+                    'date': current_date,
+                    'price': current_price,
+                    'quantity': sell_qty,
+                    'type': 'SELL'
+                })
+
+    def backtest(self, data):
+        self.data = data
+        for idx, row in data.iterrows():
+            self.excute_strategy(idx, row['close'])
+
     def backtest_results(self):
         """回测结果分析"""
         # 计算最终资产
@@ -134,12 +153,12 @@ if __name__ == "__main__":
     data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
     
     # 初始化策略
-    strategy = GridTradingStrategy(data,
-        initial_capital=100000,
+    strategy = GridTradingStrategy(
         grid_num=15,
         lower_bound=25,
         upper_bound=35,
-        order_percent=0.08
+        order_percent=0.08,
+        max_position=1000
     )
     
     # 执行回测
