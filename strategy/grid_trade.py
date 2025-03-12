@@ -150,7 +150,22 @@ class GridTradingStrategy:
 # 使用示例
 if __name__ == "__main__":
     # 加载示例数据（需替换为真实数据）
-    data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
+	# 设置随机种子（确保结果可重复）
+	np.random.seed(0)
+	# 生成日期（假设从2023-10-01开始）
+	dates = pd.date_range(start="2023-10-01", periods=10)
+	# 生成价格数据（模拟股价波动）
+	base_price = 30.0  # 初始价格
+	price_changes = np.random.randn(10) * 2  # 正态分布随机波动（均值为0，标准差为2）
+	price = np.round(base_price + price_changes.cumsum(), 2)  # 累积波动并保留两位小数
+	# 创建DataFrame
+	data = pd.DataFrame({
+		"date": dates,
+		"price": price
+	})
+	print(df)
+
+    #data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
     
     # 初始化策略
     strategy = GridTradingStrategy(
@@ -162,7 +177,7 @@ if __name__ == "__main__":
     )
     
     # 执行回测
-    strategy.execute_strategy()
+    strategy.backtest(data)
     trades = strategy.backtest_results()
     strategy.visualize_strategy()
     
