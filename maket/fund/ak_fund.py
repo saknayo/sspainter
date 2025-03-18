@@ -44,6 +44,7 @@ class AkFundAdapter:
 if __name__ == "__main__":
     # 示例：获取易方达蓝筹精选混合（基金代码：005827）
     fund_code = "005827"  # 替换为需要查询的基金代码
+    fund_code = '501010'
     start_date = "20230101"  # 初始获取日期
     end_date = datetime.now().strftime("%Y%m%d")  # 截止到今天
                         

@@ -17,7 +17,7 @@ class GridTradingStrategy:
         self.data = None
         self.initial_capital = 0
         self.positions = []  # 记录所有交易
-        self.current_cash = initial_capital
+        self.current_cash = self.initial_capital
         self.current_holdings = 0  # 当前持有数量
         
         # 策略参数
@@ -98,7 +98,7 @@ class GridTradingStrategy:
     def backtest(self, data):
         self.data = data
         for idx, row in data.iterrows():
-            self.excute_strategy(idx, row['close'])
+            self.execute_strategy(idx, row['close'])
 
     def backtest_results(self):
         """回测结果分析"""
@@ -150,36 +150,31 @@ class GridTradingStrategy:
 # 使用示例
 if __name__ == "__main__":
     # 加载示例数据（需替换为真实数据）
-	# 设置随机种子（确保结果可重复）
-	np.random.seed(0)
-	# 生成日期（假设从2023-10-01开始）
-	dates = pd.date_range(start="2023-10-01", periods=10)
-	# 生成价格数据（模拟股价波动）
-	base_price = 30.0  # 初始价格
-	price_changes = np.random.randn(10) * 2  # 正态分布随机波动（均值为0，标准差为2）
-	price = np.round(base_price + price_changes.cumsum(), 2)  # 累积波动并保留两位小数
-	# 创建DataFrame
-	data = pd.DataFrame({
-		"date": dates,
-		"price": price
-	})
-	print(df)
+    # 设置随机种子（确保结果可重复）
+    np.random.seed(0)
+    # 生成日期（假设从2023-10-01开始）
+    dates = pd.date_range(start="2023-10-01", periods=100)
+    # 生成价格数据（模拟股价波动）
+    base_price = 30.0  # 初始价格
+    price_changes = np.random.randn(100) * 2  # 正态分布随机波动（均值为0，标准差为2）
+    price = np.round(base_price + price_changes.cumsum(), 2)  # 累积波动并保留两位小数
+    # 创建DataFrame
+    data = pd.DataFrame({
+        "date": dates,
+        "close": price
+    })
+    print(data)
 
     #data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
     
     # 初始化策略
-    strategy = GridTradingStrategy(
-        grid_num=15,
-        lower_bound=25,
-        upper_bound=35,
-        order_percent=0.08,
-        max_position=1000
-    )
-    
+    strategy = GridTradingStrategy(grid_num=15, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=1000)
+    strategy.set_initial_state(initial_capital=100000, current_cash=100000, current_holdings=0)
+
     # 执行回测
     strategy.backtest(data)
     trades = strategy.backtest_results()
-    strategy.visualize_strategy()
+    #strategy.visualize_strategy()
     
     # 输出交易记录
     print("\n前5笔交易记录：")
