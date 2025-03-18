@@ -1,5 +1,5 @@
-from share.ak_share import AkShareAdapter
-from fund.ak_fund import AkFundAdapter
+from ayaa.maket.share.ak_share import AkShareAdapter
+from ayaa.maket.fund.ak_fund import AkFundAdapter
 
 class SourceMgr:
     _share_source_adapter = {

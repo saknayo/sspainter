@@ -1,7 +1,7 @@
 import pandas as pd
 import sqlite3
 from datetime import datetime
-from source_mgr import SourceMgr
+from ayaa.maket.source_mgr import SourceMgr
 
 # 数据库文件路径
 DEFAULT_SHARE_DB_FILE = "share_data.db"
