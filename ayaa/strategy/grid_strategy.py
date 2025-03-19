@@ -59,6 +59,8 @@ class GridTradingStrategy:
     def execute_strategy(self, current_date, current_price):
         """执行策略"""
         #current_price = row['close']
+        quantity = 0
+        trade_type = 'BUY'
         
         # 检查每个网格线
         for level in self.grid_levels:
@@ -72,13 +74,9 @@ class GridTradingStrategy:
                 if cost <= self.current_cash:
                     self.current_cash -= cost
                     self.current_holdings += order_qty
-                    self.positions.append({
-                        'date': current_date,
-                        'price': current_price,
-                        'quantity': order_qty,
-                        'type': 'BUY'
-                    })
-            
+                    quantity += order_qty
+                    trade_type = 'BUY'
+                    print(f'buy  {current_date} {self.current_cash} {cost} {current_price} {order_qty}') 
             # 卖出条件：价格高于网格线且有持仓
             if current_price >= level and self.current_holdings > 0:
                 sell_qty = min(
@@ -88,13 +86,16 @@ class GridTradingStrategy:
                 proceeds = sell_qty * current_price
                 self.current_cash += proceeds
                 self.current_holdings -= sell_qty
-                self.positions.append({
-                    'date': current_date,
-                    'price': current_price,
-                    'quantity': sell_qty,
-                    'type': 'SELL'
-                })
-
+                quantity -= sell_qty
+                trade_type = 'SELL'
+                print(f'sell {current_date} {self.current_cash} {proceeds} {current_price} {sell_qty}') 
+        if abs(quantity) > 1:
+            self.positions.append({
+                'date': current_date,
+                'price': current_price,
+                'quantity' : abs(quantity),
+                'type' : 'BUY' if quantity > 0 else 'SELL'
+            })
     def backtest(self, data):
         self.data = data
         for idx, row in data.iterrows():
@@ -151,7 +152,7 @@ class GridTradingStrategy:
 if __name__ == "__main__":
     # 加载示例数据（需替换为真实数据）
     # 设置随机种子（确保结果可重复）
-    np.random.seed(0)
+    #np.random.seed(0)
     # 生成日期（假设从2023-10-01开始）
     dates = pd.date_range(start="2023-10-01", periods=100)
     # 生成价格数据（模拟股价波动）
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     #data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
     
     # 初始化策略
-    strategy = GridTradingStrategy(grid_num=15, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=1000)
+    strategy = GridTradingStrategy(grid_num=15, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=10000)
     strategy.set_initial_state(initial_capital=100000, current_cash=100000, current_holdings=0)
 
     # 执行回测
@@ -178,4 +179,5 @@ if __name__ == "__main__":
     
     # 输出交易记录
     print("\n前5笔交易记录：")
-    print(trades.head())
+    #print(trades.head())
+    print(trades)
