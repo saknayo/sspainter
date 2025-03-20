@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-class GridTradingStrategy:
+class GridMTradingStrategy:
     def __init__(self,
         grid_num=15,
         lower_bound=25,
@@ -76,7 +76,7 @@ class GridTradingStrategy:
                     self.current_holdings += order_qty
                     quantity += order_qty
                     trade_type = 'BUY'
-                    #print(f'buy  {current_date} {self.current_cash} {cost} {current_price} {order_qty}') 
+                    print(f'buy  {current_date} {self.current_cash} {cost} {current_price} {order_qty}') 
             # 卖出条件：价格高于网格线且有持仓
             if current_price >= level and self.current_holdings > 0:
                 sell_qty = min(
@@ -88,7 +88,7 @@ class GridTradingStrategy:
                 self.current_holdings -= sell_qty
                 quantity -= sell_qty
                 trade_type = 'SELL'
-                #print(f'sell {current_date} {self.current_cash} {proceeds} {current_price} {sell_qty}') 
+                print(f'sell {current_date} {self.current_cash} {proceeds} {current_price} {sell_qty}') 
         if abs(quantity) > 1:
             self.positions.append({
                 'date': current_date,
@@ -117,8 +117,6 @@ class GridTradingStrategy:
         print(f"总收益率: {total_return*100:.2f}%")
         print(f"总交易次数: {len(trades)}")
         print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
-        print(f"sprice: {self.data['close'].iloc[0]}")
-        print(f"eprice: {self.data['close'].iloc[-1]}")
   
         return trades
     
@@ -156,13 +154,10 @@ if __name__ == "__main__":
     # 设置随机种子（确保结果可重复）
     #np.random.seed(0)
     # 生成日期（假设从2023-10-01开始）
-    length = 200
-    dates = pd.date_range(start="2023-10-01", periods=length)
+    dates = pd.date_range(start="2023-10-01", periods=100)
     # 生成价格数据（模拟股价波动）
     base_price = 30.0  # 初始价格
-    #price_changes = np.random.normal(0, 0.051, length) + 1  # 正态分布随机波动（均值为0，标准差为2）
-    #price = np.round(base_price * price_changes.cumprod(), 2)  # 累积波动并保留两位小数
-    price_changes = np.random.randn(200) * 2  # 正态分布随机波动（均值为0，标准差为2）
+    price_changes = np.random.randn(100) * 2  # 正态分布随机波动（均值为0，标准差为2）
     price = np.round(base_price + price_changes.cumsum(), 2)  # 累积波动并保留两位小数
     # 创建DataFrame
     data = pd.DataFrame({
@@ -174,13 +169,13 @@ if __name__ == "__main__":
     #data = pd.read_csv('stock_data.csv', index_col='date', parse_dates=True)
     
     # 初始化策略
-    strategy = GridTradingStrategy(grid_num=10, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=10000)
+    strategy = GridMTradingStrategy(grid_num=15, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=10000)
     strategy.set_initial_state(initial_capital=100000, current_cash=100000, current_holdings=0)
 
     # 执行回测
     strategy.backtest(data)
     trades = strategy.backtest_results()
-    strategy.visualize_strategy()
+    #strategy.visualize_strategy()
     
     # 输出交易记录
     print("\n前5笔交易记录：")
