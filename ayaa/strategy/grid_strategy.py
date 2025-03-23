@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from ayaa.strategy.finance_mgr import FinanceMgr
 
 class GridTradingStrategy:
     def __init__(self,
@@ -19,6 +20,7 @@ class GridTradingStrategy:
         self.positions = []  # 记录所有交易
         self.current_cash = self.initial_capital
         self.current_holdings = 0  # 当前持有数量
+        self.holding_rations = []  # 当前持有数量
         
         # 策略参数
         self.grid_params = {
@@ -31,16 +33,23 @@ class GridTradingStrategy:
         
         # 生成网格区间
         self.generate_grid_levels()
-    
+   
     def set_initial_state(self, initial_capital, current_cash, current_holdings):
         self.initial_capital = initial_capital
         self.current_cash = current_cash 
         self.current_holdings = current_holdings  # 当前持有数量
+        buy_fee = { 0 : 0.0015, 10000 : 0.001 }
+        sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
+        mgr_fee = 0
+        fee_config = (buy_fee, sell_fee, mgr_fee)
+        self.financer = FinanceMgr(init_cash=initial_capital, buy_max_fee=0.001, sell_max_fee=0.001, fee_config=fee_config)
 
     def reset_state(self):
         self.set_initial_state(0, 0, 0)
         self.positions = []  # clear trade records
+        self.holding_rations = []
         self.data = None
+        self.financer.reset()
 
     def generate_grid_levels(self):
         """生成网格价格区间"""
@@ -58,64 +67,80 @@ class GridTradingStrategy:
     
     def execute_strategy(self, current_date, current_price):
         """执行策略"""
-        #current_price = row['close']
         quantity = 0
-        trade_type = 'BUY'
         
         # 检查每个网格线
         for level in self.grid_levels:
             # 买入条件：价格低于网格线且未持仓
-            if current_price <= level and self.current_holdings < self.grid_params['max_position']:
-                order_qty = min(
-                    self.calculate_order_size(current_price),
-                    self.grid_params['max_position'] - self.current_holdings
-                )
-                cost = order_qty * current_price
-                if cost <= self.current_cash:
-                    self.current_cash -= cost
-                    self.current_holdings += order_qty
-                    quantity += order_qty
-                    trade_type = 'BUY'
-                    #print(f'buy  {current_date} {self.current_cash} {cost} {current_price} {order_qty}') 
+            # if current_price <= level and self.current_holdings < self.grid_params['max_position']:
+            if current_price <= level:
+                order_qty = self.calculate_order_size(current_price)
+                quantity += order_qty
+                # print(f'buy  {current_date} {self.financer.current_cash} {current_price} {order_qty} {real_buy}') 
+                # order_qty = min(
+                #     self.calculate_order_size(current_price),
+                #     self.grid_params['max_position'] - self.current_holdings
+                # )
+                # cost = order_qty * current_price
+                # if cost <= self.current_cash:
+                #     self.current_cash -= cost
+                #     self.current_holdings += order_qty
+                #     quantity += order_qty
             # 卖出条件：价格高于网格线且有持仓
-            if current_price >= level and self.current_holdings > 0:
-                sell_qty = min(
-                    self.calculate_order_size(current_price),
-                    self.current_holdings
-                )
-                proceeds = sell_qty * current_price
-                self.current_cash += proceeds
-                self.current_holdings -= sell_qty
-                quantity -= sell_qty
-                trade_type = 'SELL'
+            # if current_price >= level and self.current_holdings > 0:
+            if current_price >= level:
+                order_qty = self.calculate_order_size(current_price)
+                quantity -= order_qty
+                # print(f'sell  {current_date} {self.financer.current_cash} {current_price} {order_qty} {real_sell}') 
+                # sell_qty = min(
+                #     self.calculate_order_size(current_price),
+                #     self.current_holdings
+                # )
+                # proceeds = sell_qty * current_price * 0.99999
+                # self.current_cash += proceeds
+                # self.current_holdings -= sell_qty
+                # quantity -= sell_qty
                 #print(f'sell {current_date} {self.current_cash} {proceeds} {current_price} {sell_qty}') 
-        if abs(quantity) > 1:
+        real_quantity = 0
+        stype = ''
+        if quantity > 1:
+            real_quantity = self.financer.buy(current_date, current_price, abs(quantity))
+            stype = 'BUY'
+        if quantity < -1:
+            real_quantity = self.financer.sell(current_date, current_price, abs(quantity))
+            stype = 'SELL'
+        if real_quantity > 1:
+            # print(f'date : {current_date} price : {current_price} quantity  : {real_quantity} type  : {stype}')
             self.positions.append({
                 'date': current_date,
                 'price': current_price,
-                'quantity' : abs(quantity),
-                'type' : 'BUY' if quantity > 0 else 'SELL'
+                'quantity' : real_quantity,
+                'type' : stype,
             })
     def backtest(self, data):
         self.data = data
         for idx, row in data.iterrows():
-            self.execute_strategy(idx, row['close'])
+            self.execute_strategy(row['date'], row['close'])
+            self.holding_rations.append({'date':row['date'],
+                                         'ration':self.financer.get_holding_ration(row['close']),
+                                         'profit':self.financer.get_profit(row['close']) })
 
     def backtest_results(self):
         """回测结果分析"""
         # 计算最终资产
-        final_value = self.current_cash + self.current_holdings * self.data['close'].iloc[-1]
-        total_return = (final_value - self.initial_capital) / self.initial_capital
+        final_value = self.financer.get_total_value(self.data['close'].iloc[-1])
+        total_return = self.financer.get_profit(self.data['close'].iloc[-1])
         
         # 统计交易数据
         trades = pd.DataFrame(self.positions)
         win_trades = trades[trades['type'] == 'SELL']
         
         print("\n========== 回测结果 ==========")
-        print(f"初始资金: {self.initial_capital:.2f}")
+        print(f"初始资金: {self.financer.init_cash:.2f}")
         print(f"最终资产: {final_value:.2f}")
         print(f"总收益率: {total_return*100:.2f}%")
-        print(f"总交易次数: {len(trades)}")
+        print(f"最终持仓: {self.financer.total_holding:.2f}")
+        print(f"总交易次数: {len(trades)}/{len(self.data)}")
         print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
         print(f"sprice: {self.data['close'].iloc[0]}")
         print(f"eprice: {self.data['close'].iloc[-1]}")
@@ -125,7 +150,11 @@ class GridTradingStrategy:
     def visualize_strategy(self):
         """可视化策略执行"""
         plt.figure(figsize=(12,6))
-        plt.plot(self.data['close'], label='Price')
+        plt.plot(self.data['date'], self.data['close'], label='Price')
+        plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
+        plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
+        plt.axhline(y=0, color="black", linestyle=":")
+        plt.axhline(y=1, color="black", linestyle=":")
         
         # 绘制买卖点
         buys = [t for t in self.positions if t['type'] == 'BUY']

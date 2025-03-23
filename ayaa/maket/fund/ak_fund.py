@@ -12,6 +12,7 @@ class AkFundAdapter:
         })
         df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
         df['symbol'] = symbol
+        df['close'] = df['nav']
         df['src'] = 'AK'
         return df
         

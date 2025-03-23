@@ -1,8 +1,10 @@
 from ayaa.strategy.grid_strategy import GridTradingStrategy
+from ayaa.strategy.shan_strategy import ShanTradingStrategy
 
 class StrategyMgr:
     strategies = {
         'Grid' : GridTradingStrategy,
+        'Shan' : ShanTradingStrategy,
     }
     @classmethod
     def get_strategy(cls, name):

@@ -6,7 +6,7 @@ from ayaa.maket.source_mgr import SourceMgr
 # 数据库文件路径
 DEFAULT_SHARE_DB_FILE = "share_data.db"
 SHARE_FEATURES = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'src']  # 基础特征+技术指标[8]
-FUND_FEATURES = ['date', 'symbol', 'nav', 'src']  # 基础特征+技术指标[8]
+FUND_FEATURES = ['date', 'symbol', 'nav', 'src', 'close']  # 基础特征+技术指标[8]
 
 class DataMgr:
     def __init__(self, share_source='AK', fund_source='AK', db_file=''):
@@ -59,6 +59,7 @@ class DataMgr:
                     symbol TEXT,
                     date TEXT,
                     nav REAL,
+                    close REAL,
                     src TEXT,
                     PRIMARY KEY (symbol, date)
                 )

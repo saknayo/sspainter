@@ -2,7 +2,7 @@ from datetime import datetime
 import pandas as pd
 from typing import Dict, Any, Optional
 
-class TraderA:
+class TraderB:
     """
     交易员类 - 负责整合数据、策略和交易执行
     """
@@ -26,16 +26,9 @@ class TraderA:
         # 运行时状态
         self.current_data = None    # 当前市场数据
         self.selected_symbol = None # 当前交易标的
-        '''self.active_strategy = self.strategy_mgr.get_strategy('Grid')(
-            grid_num=10,
-            lower_bound=1.5,
-            upper_bound=2,
-            order_percent=0.05,
-            max_position=100000)
-        '''
         self.active_strategy = self.strategy_mgr.get_strategy('Shan')(
-            portion=0.5,
-            linspace=0.05,
+            portion=0.2,
+            linspace=0.02,
             lower_bound=25,
             upper_bound=35)
 
@@ -64,28 +57,16 @@ class TraderA:
     def auto_backtest(self, symbol, start_date, end_date):
         # 获取数据
         data = self.data_mgr.fetch_daily_stock_data('fund', symbol, start_date, end_date)
-        data['close'] = data['nav']
-        upper = max(data['close'])
-        lower = min(data['close'])
-        amper = (data['close'].iloc[-1] - data['close'].iloc[0]) / data['close'].iloc[0]
-        mpos = 1.0 * self.init_cash / lower
-        
-        # 初始化策略
-        strategy = self.strategy_mgr.get_strategy('Grid')(
-            grid_num=10,
-            lower_bound=lower,
-            upper_bound=upper,
-            order_percent=0.05,
-            max_position=mpos)
 
+        # 初始化策略
+        strategy = self.active_strategy
+        strategy.reset_state()
         strategy.set_initial_state(initial_capital=self.init_cash, current_cash=self.init_cash, current_holdings=0)
 
         # 执行回测
         strategy.backtest(data)
         trades = strategy.backtest_results()
-        print(f'upper:{upper}')
-        print(f'lower:{lower}')
-        print(f'mpos:{mpos}')
+        amper = (data['close'].iloc[-1] - data['close'].iloc[0]) / data['close'].iloc[0]
         print(f"涨跌幅:{amper*100:.2f}%")
         strategy.visualize_strategy()
                    
