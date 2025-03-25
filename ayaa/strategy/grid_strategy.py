@@ -29,6 +29,8 @@ class GridTradingStrategy:
         
         # 生成网格区间
         self.generate_grid_levels()
+        self.last_grid = 0
+        self.last_trade_time = 0
    
     def set_financer(self, financer):
         self.financer = financer
@@ -59,8 +61,46 @@ class GridTradingStrategy:
     def calculate_order_size(self, price):
         """计算单次交易数量"""
         return (self.financer.init_cash * self.grid_params['order_percent']) / price
-    
+
     def execute_strategy(self, current_date, current_price):
+        """执行策略"""
+        quantity = 0
+        current_grid = np.digitize(current_price, self.grid_levels)
+        self.last_trade_time += 1
+        
+        if current_grid != self.last_grid:
+            self.last_grid = current_grid
+            self.last_trade_time = 0
+
+            # 检查每个网格线
+            for level in self.grid_levels:
+                # 买入条件：价格低于网格线且未持仓
+                if current_price <= level:
+                    order_qty = self.calculate_order_size(current_price)
+                    quantity += order_qty
+                # 卖出条件：价格高于网格线且有持仓
+                if current_price >= level:
+                    order_qty = self.calculate_order_size(current_price)
+                    quantity -= order_qty
+
+        real_quantity = 0
+        stype = ''
+        if quantity > 1:
+            real_quantity = self.financer.buy(current_date, current_price, abs(quantity))
+            stype = 'BUY'
+        if quantity < -1:
+            real_quantity = self.financer.sell(current_date, current_price, abs(quantity))
+            stype = 'SELL'
+        if real_quantity > 1:
+            # print(f'date : {current_date} price : {current_price} quantity  : {real_quantity} type  : {stype}')
+            self.positions.append({
+                'date': current_date,
+                'price': current_price,
+                'quantity' : real_quantity,
+                'type' : stype,
+            })
+ 
+    '''def execute_strategy(self, current_date, current_price):
         """执行策略"""
         quantity = 0
         
@@ -90,7 +130,7 @@ class GridTradingStrategy:
                 'price': current_price,
                 'quantity' : real_quantity,
                 'type' : stype,
-            })
+            })'''
     def backtest(self, symbol, data):
         self.symbol = symbol
         self.data = data
