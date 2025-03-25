@@ -19,10 +19,14 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
     df['sma'] = df[price_col].rolling(window=window).mean()
     df['sma5'] = df[price_col].rolling(window=5).mean()
     df['sbc5'] = 1*(df[price_col] - df['sma5'])
+    df['sbc5p'] = df['sbc5'].apply(lambda x : x if x > 0 else 0)
+    df['sbc5n'] = df['sbc5'].apply(lambda x : x if x < 0 else 0)
 
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
+    #rolling_std = 2*df[price_col].rolling(window=60).std()
+   # rolling_std += df[price_col].rolling(window=5).std()
 
     # 计算上下轨
     df['upper_band'] = df['sma'] + (rolling_std * num_std) + df['sbc5']

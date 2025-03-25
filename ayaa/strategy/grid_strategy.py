@@ -178,7 +178,7 @@ class GridTradingStrategy:
     
     def visualize_strategy(self):
         """可视化策略执行"""
-        plt.figure(figsize=(12,6))
+        plt.figure(figsize=(24,12))
         plt.plot(self.data['date'], self.data['close'], label='Price')
         plt.plot(self.data['date'], self.ub['lower_band'], label='Lower')
         plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
@@ -210,8 +210,8 @@ class GridTradingStrategy:
             
         plt.title('Grid Trading Strategy')
         plt.legend()
-        plt.savefig(f'misc/{self.symbol}.png')
-        plt.show()
+        plt.savefig(f'misc/{self.symbol}.jpg', dpi = 100)
+        # plt.show()
 
 # 使用示例
 if __name__ == "__main__":

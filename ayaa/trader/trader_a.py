@@ -83,7 +83,7 @@ class TraderA:
         sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
         mgr_fee = 0
         fee_config = (buy_fee, sell_fee, mgr_fee)
-        financer = FinanceMgr(init_cash=self.init_cash, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=0.5, fee_config=fee_config)
+        financer = FinanceMgr(init_cash=self.init_cash, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=0.8, fee_config=fee_config)
         strategy.set_financer(financer)
 
         # 执行回测
