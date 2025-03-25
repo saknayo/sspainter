@@ -134,7 +134,7 @@ class GridTradingStrategy:
     def backtest(self, symbol, data):
         self.symbol = symbol
         self.data = data
-        self.ub = calculate_bollinger_bands(data, window=60, num_std=3, price_col='close', fill_na=True)
+        self.ub = calculate_bollinger_bands(data, window=60, num_std=5, price_col='close', fill_na=True)
         for idx, row in data.iterrows():
             self.reset_grid_level(self.ub.iloc[idx]['lower_band'], self.ub.iloc[idx]['upper_band']) 
             self.execute_strategy(row['date'], row['close'])
