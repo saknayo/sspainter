@@ -17,14 +17,16 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
 
     # 计算中轨（移动平均）
     df['sma'] = df[price_col].rolling(window=window).mean()
+    df['sma5'] = df[price_col].rolling(window=5).mean()
+    df['sbc5'] = 1*(df[price_col] - df['sma5'])
 
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
 
     # 计算上下轨
-    df['upper_band'] = df['sma'] + (rolling_std * num_std)
-    df['lower_band'] = df['sma'] - (rolling_std * num_std)
+    df['upper_band'] = df['sma'] + (rolling_std * num_std) + df['sbc5']
+    df['lower_band'] = df['sma'] - (rolling_std * num_std) + df['sbc5']
 
     if fill_na:
         fill_d = pd.DataFrame({
