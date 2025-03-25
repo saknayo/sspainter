@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from ayaa.strategy.finance_mgr import FinanceMgr
+from ayaa.utils.perf import calculate_bollinger_bands
 
 class GridTradingStrategy:
     def __init__(self,
@@ -12,14 +13,9 @@ class GridTradingStrategy:
         max_position=1000):
         """
         网格交易策略
-        :param data: 包含价格数据的DataFrame（需包含'close'列）
-        :param initial_capital: 初始资金（默认10万）
         """
         self.data = None
-        self.initial_capital = 0
         self.positions = []  # 记录所有交易
-        self.current_cash = self.initial_capital
-        self.current_holdings = 0  # 当前持有数量
         self.holding_rations = []  # 当前持有数量
         
         # 策略参数
@@ -34,18 +30,10 @@ class GridTradingStrategy:
         # 生成网格区间
         self.generate_grid_levels()
    
-    def set_initial_state(self, initial_capital, current_cash, current_holdings):
-        self.initial_capital = initial_capital
-        self.current_cash = current_cash 
-        self.current_holdings = current_holdings  # 当前持有数量
-        buy_fee = { 0 : 0.0015, 10000 : 0.001 }
-        sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
-        mgr_fee = 0
-        fee_config = (buy_fee, sell_fee, mgr_fee)
-        self.financer = FinanceMgr(init_cash=initial_capital, buy_max_fee=0.001, sell_max_fee=0.001, fee_config=fee_config)
+    def set_financer(self, financer):
+        self.financer = financer
 
     def reset_state(self):
-        self.set_initial_state(0, 0, 0)
         self.positions = []  # clear trade records
         self.holding_rations = []
         self.data = None
@@ -59,11 +47,18 @@ class GridTradingStrategy:
             self.grid_params['grid_num'] + 1
         )
         self.grid_levels = price_range.tolist()
-        print(f"生成网格价格区间：{self.grid_levels}")
+        #print(f"生成网格价格区间：{self.grid_levels}")
+
+    def reset_grid_level(self, lower, upper, grid_num=None):
+        self.grid_params['lower_bound'] = lower
+        self.grid_params['upper_bound'] = upper
+        self.grid_params['grid_num'] = grid_num if grid_num else self.grid_params['grid_num'] 
+        self.generate_grid_levels()
+        
     
     def calculate_order_size(self, price):
         """计算单次交易数量"""
-        return (self.initial_capital * self.grid_params['order_percent']) / price
+        return (self.financer.init_cash * self.grid_params['order_percent']) / price
     
     def execute_strategy(self, current_date, current_price):
         """执行策略"""
@@ -72,35 +67,14 @@ class GridTradingStrategy:
         # 检查每个网格线
         for level in self.grid_levels:
             # 买入条件：价格低于网格线且未持仓
-            # if current_price <= level and self.current_holdings < self.grid_params['max_position']:
             if current_price <= level:
                 order_qty = self.calculate_order_size(current_price)
                 quantity += order_qty
-                # print(f'buy  {current_date} {self.financer.current_cash} {current_price} {order_qty} {real_buy}') 
-                # order_qty = min(
-                #     self.calculate_order_size(current_price),
-                #     self.grid_params['max_position'] - self.current_holdings
-                # )
-                # cost = order_qty * current_price
-                # if cost <= self.current_cash:
-                #     self.current_cash -= cost
-                #     self.current_holdings += order_qty
-                #     quantity += order_qty
             # 卖出条件：价格高于网格线且有持仓
-            # if current_price >= level and self.current_holdings > 0:
             if current_price >= level:
                 order_qty = self.calculate_order_size(current_price)
                 quantity -= order_qty
-                # print(f'sell  {current_date} {self.financer.current_cash} {current_price} {order_qty} {real_sell}') 
-                # sell_qty = min(
-                #     self.calculate_order_size(current_price),
-                #     self.current_holdings
-                # )
-                # proceeds = sell_qty * current_price * 0.99999
-                # self.current_cash += proceeds
-                # self.current_holdings -= sell_qty
-                # quantity -= sell_qty
-                #print(f'sell {current_date} {self.current_cash} {proceeds} {current_price} {sell_qty}') 
+
         real_quantity = 0
         stype = ''
         if quantity > 1:
@@ -117,15 +91,18 @@ class GridTradingStrategy:
                 'quantity' : real_quantity,
                 'type' : stype,
             })
-    def backtest(self, data):
+    def backtest(self, symbol, data):
+        self.symbol = symbol
         self.data = data
+        self.ub = calculate_bollinger_bands(data, window=60, num_std=3, price_col='close', fill_na=True)
         for idx, row in data.iterrows():
+            self.reset_grid_level(self.ub.iloc[idx]['lower_band'], self.ub.iloc[idx]['upper_band']) 
             self.execute_strategy(row['date'], row['close'])
             self.holding_rations.append({'date':row['date'],
                                          'ration':self.financer.get_holding_ration(row['close']),
                                          'profit':self.financer.get_profit(row['close']) })
 
-    def backtest_results(self):
+    def backtest_results(self, printf = False):
         """回测结果分析"""
         # 计算最终资产
         final_value = self.financer.get_total_value(self.data['close'].iloc[-1])
@@ -134,23 +111,39 @@ class GridTradingStrategy:
         # 统计交易数据
         trades = pd.DataFrame(self.positions)
         win_trades = trades[trades['type'] == 'SELL']
-        
-        print("\n========== 回测结果 ==========")
-        print(f"初始资金: {self.financer.init_cash:.2f}")
-        print(f"最终资产: {final_value:.2f}")
-        print(f"总收益率: {total_return*100:.2f}%")
-        print(f"最终持仓: {self.financer.total_holding:.2f}")
-        print(f"总交易次数: {len(trades)}/{len(self.data)}")
-        print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
-        print(f"sprice: {self.data['close'].iloc[0]}")
-        print(f"eprice: {self.data['close'].iloc[-1]}")
+
+        if printf: 
+            print("\n========== 回测结果 ==========")
+            print(f"初始资金: {self.financer.init_cash:.2f}")
+            print(f"最终资产: {final_value:.2f}")
+            print(f"总收益率: {total_return*100:.2f}%")
+            print(f"最终持仓: {self.financer.total_holding:.2f}")
+            print(f"总交易次数: {len(trades)}/{len(self.data)}")
+            print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
+            print(f"sprice: {self.data['close'].iloc[0]}")
+            print(f"eprice: {self.data['close'].iloc[-1]}")
   
-        return trades
+        res = {
+            "init_cash" : self.financer.init_cash,
+            "final_cash" : final_value,
+            "profit" : total_return*100,
+            "holding" : self.financer.total_holding,
+            "trade_times" : f'{len(trades)}/{len(self.data)}',
+            "sell_buy" : len(win_trades)/len(trades),
+            "sprice" : self.data['close'].iloc[0],
+            "eprice" : self.data['close'].iloc[-1],
+        }
+  
+        return trades, res
     
     def visualize_strategy(self):
         """可视化策略执行"""
         plt.figure(figsize=(12,6))
         plt.plot(self.data['date'], self.data['close'], label='Price')
+        plt.plot(self.data['date'], self.ub['lower_band'], label='Lower')
+        plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
+        plt.plot(self.data['date'], self.ub['sda'], label='sda')
+        plt.plot(self.data['date'], self.ub['sma'], label='sma')
         plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
         plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
         plt.axhline(y=0, color="black", linestyle=":")
@@ -177,6 +170,7 @@ class GridTradingStrategy:
             
         plt.title('Grid Trading Strategy')
         plt.legend()
+        plt.savefig(f'misc/{self.symbol}.png')
         plt.show()
 
 # 使用示例
@@ -204,11 +198,15 @@ if __name__ == "__main__":
     
     # 初始化策略
     strategy = GridTradingStrategy(grid_num=10, lower_bound=25, upper_bound=35, order_percent=0.08, max_position=10000)
-    strategy.set_initial_state(initial_capital=100000, current_cash=100000, current_holdings=0)
-
+    buy_fee = { 0 : 0.0015, 10000 : 0.001 }
+    sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
+    mgr_fee = 0
+    fee_config = (buy_fee, sell_fee, mgr_fee)
+    financer = FinanceMgr(init_cash=100000, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=0.8, fee_config=fee_config)
+    strategy.set_financer(financer)
     # 执行回测
     strategy.backtest(data)
-    trades = strategy.backtest_results()
+    trades, res = strategy.backtest_results()
     strategy.visualize_strategy()
     
     # 输出交易记录

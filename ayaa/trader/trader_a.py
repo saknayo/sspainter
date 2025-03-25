@@ -1,6 +1,7 @@
 from datetime import datetime
 import pandas as pd
 from typing import Dict, Any, Optional
+from ayaa.strategy.finance_mgr import FinanceMgr
 
 class TraderA:
     """
@@ -49,11 +50,11 @@ class TraderA:
         #data['close'] = data['nav']
         
         # 初始化策略
-        self.active_strategy.set_initial_state(initial_capital=self.init_cash, current_cash=self.init_cash, current_holdings=0)
+        # self.active_strategy.set_initial_state(initial_capital=self.init_cash, current_cash=self.init_cash, current_holdings=0)
 
         # 执行回测
         self.active_strategy.backtest(data)
-        trades = self.active_strategy.backtest_results()
+        trades, res = self.active_strategy.backtest_results()
         self.active_strategy.visualize_strategy()
         
         # 输出交易记录
@@ -61,13 +62,13 @@ class TraderA:
         #print(trades.head())
         print(trades)
  
-    def auto_backtest(self, symbol, start_date, end_date):
+    def auto_backtest(self, symbol, start_date, end_date, visualize = False):
         # 获取数据
         data = self.data_mgr.fetch_daily_stock_data('fund', symbol, start_date, end_date)
         data['close'] = data['nav']
         upper = max(data['close'])
         lower = min(data['close'])
-        amper = (data['close'].iloc[-1] - data['close'].iloc[0]) / data['close'].iloc[0]
+        amper = 100 * (data['close'].iloc[-1] - data['close'].iloc[0]) / data['close'].iloc[0]
         mpos = 1.0 * self.init_cash / lower
         
         # 初始化策略
@@ -78,16 +79,24 @@ class TraderA:
             order_percent=0.05,
             max_position=mpos)
 
-        strategy.set_initial_state(initial_capital=self.init_cash, current_cash=self.init_cash, current_holdings=0)
+        buy_fee = { 0 : 0.0015, 10000 : 0.001 }
+        sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
+        mgr_fee = 0
+        fee_config = (buy_fee, sell_fee, mgr_fee)
+        financer = FinanceMgr(init_cash=self.init_cash, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=0.5, fee_config=fee_config)
+        strategy.set_financer(financer)
 
         # 执行回测
-        strategy.backtest(data)
-        trades = strategy.backtest_results()
-        print(f'upper:{upper}')
-        print(f'lower:{lower}')
-        print(f'mpos:{mpos}')
-        print(f"涨跌幅:{amper*100:.2f}%")
-        strategy.visualize_strategy()
+        strategy.backtest(symbol, data)
+        trades, res = strategy.backtest_results()
+        res['symbol'] = symbol 
+        res['upper'] = upper
+        res['lower'] = lower
+        res['mpos'] = mpos
+        res['amper'] = amper
+        if visualize:
+            strategy.visualize_strategy()
+        return res
                    
 if __name__ == "__main__":
     # 初始化依赖组件（需实现具体类）

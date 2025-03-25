@@ -2,13 +2,14 @@ from ayaa.utils.fee_mgr import TransactionFeeer
 from ayaa.utils.trade_day import calc_hold_days
 
 class FinanceMgr:
-    def __init__(self, init_cash, buy_max_fee, sell_max_fee, fee_config): 
+    def __init__(self, init_cash, buy_max_fee, sell_max_fee, max_holding_ration, fee_config): 
         self.init_cash = init_cash
         self.current_cash = self.init_cash
         self.total_holding = 0
         self.holdings = []
         self.buy_max_fee = buy_max_fee
         self.sell_max_fee = sell_max_fee
+        self.max_holding_ration = max_holding_ration # 最大持仓比例
         self.feeer = TransactionFeeer(*fee_config)
 
     def get_total_value(self, current_price):
@@ -21,6 +22,9 @@ class FinanceMgr:
     def get_holding_ration(self, current_price):
         return self.total_holding * current_price / self.get_total_value(current_price)
 
+    def set_max_holding_ration(self, new_ration):
+        self.max_holding_ration = new_ration
+
     def reset(self):
         self.init_cash = 0
         self.current_cash = self.init_cash
@@ -31,9 +35,12 @@ class FinanceMgr:
  
     def buy(self, current_date, current_price, quantity):
         # buy_fee = self.get_fee('buy', current_date, quantity=)
-        need_cash = current_price * quantity
+        left_quantity = min(self.get_total_value(current_price) * self.max_holding_ration / current_price - self.total_holding, quantity)
+        need_cash = current_price * left_quantity
         avaliable_cash = min(need_cash, self.current_cash)
         trade_quantity = avaliable_cash / current_price
+        if trade_quantity < 100:
+            return 0
         self.current_cash -= avaliable_cash
         self.total_holding += trade_quantity
         self.holdings.append({
@@ -78,7 +85,7 @@ if __name__ == '__main__':
     sell_fee = { 0 : 0.015, 7 : 0.0075, 30 : 0}
     mgr_fee = 0
     fee_config = (buy_fee, sell_fee, mgr_fee)
-    fm = FinanceMgr(init_cash=100000, buy_max_fee=0.001, sell_max_fee=0.0075, fee_config=fee_config)
+    fm = FinanceMgr(init_cash=100000, buy_max_fee=0.001, sell_max_fee=0.0075, max_holding_ration=1.0, fee_config=fee_config)
     bty = fm.buy('2024-03-21', 30, 300)
     print('Buy:', bty)
     sty = fm.sell('2024-03-22', 30, 310)
