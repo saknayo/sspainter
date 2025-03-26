@@ -25,6 +25,7 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
 
     df['rsi'] = talib.RSI(df[price_col], timeperiod=14) / 100
     df['macd'], df['signal'], df['hist'] = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
+    df['hist_diff'] = np.diff(df['hist'], prepend=df['hist'][0])
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
