@@ -184,6 +184,10 @@ class GridTradingStrategy:
         plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
         plt.plot(self.data['date'], self.ub['sda'], label='sda')
         plt.plot(self.data['date'], self.ub['sma'], label='sma')
+        plt.plot(self.data['date'], self.ub['rsi'], label='rsi')
+        plt.plot(self.data['date'], self.ub['macd'], label='macd')
+        plt.plot(self.data['date'], self.ub['signal'], label='signal')
+
         plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
         plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
         plt.axhline(y=0, color="black", linestyle=":")

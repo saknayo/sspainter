@@ -1,4 +1,5 @@
 import pandas as pd
+import talib
 import numpy as np
 
 def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fill_na=False):
@@ -22,6 +23,8 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
     df['sbc5p'] = df['sbc5'].apply(lambda x : x if x > 0 else 0)
     df['sbc5n'] = df['sbc5'].apply(lambda x : x if x < 0 else 0)
 
+    df['rsi'] = talib.RSI(df[price_col], timeperiod=14) / 100
+    df['macd'], df['signal'], hist = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
