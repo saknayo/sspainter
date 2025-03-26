@@ -185,8 +185,8 @@ class GridTradingStrategy:
         plt.plot(self.data['date'], self.ub['sda'], label='sda')
         plt.plot(self.data['date'], self.ub['sma'], label='sma')
         plt.plot(self.data['date'], self.ub['rsi'], label='rsi')
-        plt.plot(self.data['date'], self.ub['macd'], label='macd')
-        plt.plot(self.data['date'], self.ub['signal'], label='signal')
+        plt.plot(self.data['date'], self.ub['macd']*10, label='macd')
+        plt.plot(self.data['date'], self.ub['signal']*10, label='signal')
         plt.plot(self.data['date'], self.ub['hist']*10, label='hist')
 
         plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
