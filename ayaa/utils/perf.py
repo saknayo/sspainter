@@ -24,7 +24,7 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
     df['sbc5n'] = df['sbc5'].apply(lambda x : x if x < 0 else 0)
 
     df['rsi'] = talib.RSI(df[price_col], timeperiod=14) / 100
-    df['macd'], df['signal'], hist = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
+    df['macd'], df['signal'], df['hist'] = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
@@ -34,6 +34,9 @@ def calculate_bollinger_bands(data, window=20, num_std=2, price_col='close', fil
     # 计算上下轨
     df['upper_band'] = df['sma'] + (rolling_std * num_std) + df['sbc5']
     df['lower_band'] = df['sma'] - (rolling_std * num_std) + df['sbc5']
+
+    #df['upper_band'] = (df['sma'] + (rolling_std * num_std))* (df['rsi'] / 0.7)
+    #df['lower_band'] = (df['sma'] - (rolling_std * num_std))* (df['rsi'] / 0.3)
 
     if fill_na:
         fill_d = pd.DataFrame({
