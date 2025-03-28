@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from ayaa.strategy.finance_mgr import FinanceMgr
-from ayaa.utils.perf import calculate_bollinger_bands
+from ayaa.utils.perf import calculate_bollinger_bands, calculate_perf
 
 class GridTradingStrategy:
     def __init__(self,
+        spara,
         grid_num=15,
         lower_bound=25,
         upper_bound=35,
@@ -17,6 +18,7 @@ class GridTradingStrategy:
         self.data = None
         self.positions = []  # 记录所有交易
         self.holding_rations = []  # 当前持有数量
+        self.spara = spara
         
         # 策略参数
         self.grid_params = {
@@ -40,6 +42,23 @@ class GridTradingStrategy:
         self.holding_rations = []
         self.data = None
         self.financer.reset()
+
+    def prepare_data(self, data):
+        ''' data包含一段时间内的基础数据，如date、close等其他所需
+        data:[[date price], [date price]...]'''
+        calculate_perf(data, window=self.spara['window'], price_col='close', fill_na=True)
+        # 计算上下轨
+        data['upper_band'] = data['sma'] + (data['sda']*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
+        data['lower_band'] = data['sma'] - (data['sda']*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
+
+
+    def build_strategy(self, data):
+        ''' data为要计算交易的当日数据，包括date、close以及策略所需的指标 '''
+        self.grid_params['lower_bound'] = data['lower_band']
+        self.grid_params['upper_bound'] = data['upper_band']
+        self.grid_params['grid_num'] = self.spara['grid_num']
+        self.grid_params['order_percent'] = self.spara['order_percent']
+        self.generate_grid_levels()
 
     def generate_grid_levels(self):
         """生成网格价格区间"""
@@ -135,8 +154,10 @@ class GridTradingStrategy:
         self.symbol = symbol
         self.data = data
         self.ub = calculate_bollinger_bands(data, window=60, num_std=5, price_col='close', fill_na=True)
+        self.prepare_data(data)
         for idx, row in data.iterrows():
-            self.reset_grid_level(self.ub.iloc[idx]['lower_band'], self.ub.iloc[idx]['upper_band']) 
+            self.build_strategy(row)
+            #self.reset_grid_level(self.ub.iloc[idx]['lower_band'], self.ub.iloc[idx]['upper_band']) 
             self.execute_strategy(row['date'], row['close'])
             self.holding_rations.append({'date':row['date'],
                                          'ration':self.financer.get_holding_ration(row['close']),
@@ -216,7 +237,7 @@ class GridTradingStrategy:
             
         plt.title('Grid Trading Strategy')
         plt.legend()
-        plt.savefig(f'misc/{self.symbol}.jpg', dpi = 100)
+        plt.savefig(f'misc/{self.symbol}.jpg', dpi = 200)
         # plt.show()
 
 # 使用示例

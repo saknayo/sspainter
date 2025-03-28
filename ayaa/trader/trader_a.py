@@ -63,6 +63,16 @@ class TraderA:
         print(trades)
  
     def auto_backtest(self, symbol, start_date, end_date, visualize = False):
+        spara = {
+            # financer
+            'max_holding_ration' : 0.8,
+            # strategy
+            'grid_num' : 10,
+            'order_percent' : 0.05,
+            'window' : 60,
+            'num_std' : 5,
+            'sbc5' : 1,
+        }
         # 获取数据
         data = self.data_mgr.fetch_daily_stock_data('fund', symbol, start_date, end_date)
         data['close'] = data['nav']
@@ -72,18 +82,12 @@ class TraderA:
         mpos = 1.0 * self.init_cash / lower
         
         # 初始化策略
-        strategy = self.strategy_mgr.get_strategy('Grid')(
-            grid_num=10,
-            lower_bound=lower,
-            upper_bound=upper,
-            order_percent=0.05,
-            max_position=mpos)
-
+        strategy = self.strategy_mgr.get_strategy('Grid')(spara)
         buy_fee = { 0 : 0.0015, 10000 : 0.001 }
         sell_fee = { 0 : 0.015, 7 : 0.005, 30 : 0}
         mgr_fee = 0
         fee_config = (buy_fee, sell_fee, mgr_fee)
-        financer = FinanceMgr(init_cash=self.init_cash, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=0.8, fee_config=fee_config)
+        financer = FinanceMgr(init_cash=self.init_cash, buy_max_fee=0.001, sell_max_fee=0.000, max_holding_ration=spara['max_holding_ration'], fee_config=fee_config)
         strategy.set_financer(financer)
 
         # 执行回测

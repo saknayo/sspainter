@@ -7,6 +7,7 @@ class FinanceMgr:
         self.current_cash = self.init_cash
         self.total_holding = 0
         self.holdings = []
+        self.trades = []
         self.buy_max_fee = buy_max_fee
         self.sell_max_fee = sell_max_fee
         self.max_holding_ration = max_holding_ration # 最大持仓比例
@@ -48,6 +49,12 @@ class FinanceMgr:
             'price': current_price,
             'quantity' : trade_quantity,
         })
+        self.trades.append({
+            'type': 'BUY',
+            'date': current_date,
+            'price': current_price,
+            'quantity' : trade_quantity,
+        })
         return trade_quantity
 
     def sell(self, current_date, current_price, quantity):
@@ -68,8 +75,13 @@ class FinanceMgr:
         self.total_holding -= avaliable_quantity
         sell_cash = sum(t['quantity'] * (1 - t['fee']) for t in sell_trades) * current_price
         self.current_cash += sell_cash
+        self.trades.append({
+            'type': 'SELL',
+            'date': current_date,
+            'price': current_price,
+            'quantity' : avaliable_quantity,
+        })
         return avaliable_quantity
-
 
     def get_buy_fee(self, current_price, quantity):
         amount = current_price * quantity
