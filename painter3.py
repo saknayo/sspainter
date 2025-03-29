@@ -44,7 +44,7 @@ def stats(res, period):
     finnal = [{'name':k, 'avg':np.mean(s), 'num':len(s)} for k, s in stats_res.items()]
     print(tabulate(finnal, headers="keys", tablefmt="grid"))
     #return np.mean([finnal[0]['avg'], finnal[1]['avg'], finnal[2]['avg']])
-    return finnal[2]['avg']
+    return finnal[-1]['avg']
 
 def evalution(spara):
     init_cash = 100000
@@ -182,9 +182,9 @@ if __name__ == '__main__':
 
 
     # 执行优化
-    study = optuna.create_study(direction='maximize')
+    study = optuna.create_study(direction='maximize', study_name="r2-total-avg", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
     objective = create_objective(evalution, HYPERPARAM_SPACE)
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=3000)
 
     # 输出结果
     print(f"最佳参数: {study.best_params}")
