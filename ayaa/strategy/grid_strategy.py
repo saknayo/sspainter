@@ -48,8 +48,15 @@ class GridTradingStrategy:
         data:[[date price], [date price]...]'''
         calculate_perf(data, window=self.spara['window'], price_col='close', fill_na=True)
         # 计算上下轨
-        data['upper_band'] = data['sma'] + (data['sda']*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
-        data['lower_band'] = data['sma'] - (data['sda']*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
+        data['min_width'] = data['sma'] * self.spara['min_width'] / self.spara['l_num_std']
+        data['max_width'] = data['sma'] * self.spara['max_width'] / self.spara['u_num_std']
+        data['fluct'] = data[['max_width', 'sda']].min(axis=1)
+        data['fluct'] = data[['min_width', 'fluct']].max(axis=1)
+        #fluct = data['fluct']
+        fluct = data['sda']
+     
+        data['upper_band'] = data['sma'] + (fluct*self.spara['u_num_std']) + data['sbc5']*self.spara['u_sbc5']
+        data['lower_band'] = data['sma'] - (fluct*self.spara['l_num_std']) + data['sbc5']*self.spara['l_sbc5']
 
 
     def build_strategy(self, data):
@@ -153,7 +160,7 @@ class GridTradingStrategy:
     def backtest(self, symbol, data):
         self.symbol = symbol
         self.data = data
-        self.ub = calculate_bollinger_bands(data, window=60, num_std=5, price_col='close', fill_na=True)
+        # self.ub = calculate_bollinger_bands(data, window=60, num_std=5, price_col='close', fill_na=True)
         self.prepare_data(data)
         for idx, row in data.iterrows():
             self.build_strategy(row)
@@ -171,7 +178,7 @@ class GridTradingStrategy:
         
         # 统计交易数据
         trades = pd.DataFrame(self.positions)
-        win_trades = trades[trades['type'] == 'SELL']
+        # win_trades = trades[trades['type'] == 'SELL']
 
         if printf: 
             print("\n========== 回测结果 ==========")
@@ -180,7 +187,7 @@ class GridTradingStrategy:
             print(f"总收益率: {total_return*100:.2f}%")
             print(f"最终持仓: {self.financer.total_holding:.2f}")
             print(f"总交易次数: {len(trades)}/{len(self.data)}")
-            print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
+            # print(f"买卖比例: {len(win_trades)/len(trades):.2%}")
             print(f"sprice: {self.data['close'].iloc[0]}")
             print(f"eprice: {self.data['close'].iloc[-1]}")
   
@@ -190,7 +197,7 @@ class GridTradingStrategy:
             "profit" : total_return*100,
             "holding" : self.financer.total_holding,
             "trade_times" : f'{len(trades)}/{len(self.data)}',
-            "sell_buy" : len(win_trades)/len(trades),
+            # "sell_buy" : len(win_trades)/len(trades),
             "sprice" : self.data['close'].iloc[0],
             "eprice" : self.data['close'].iloc[-1],
         }
@@ -201,15 +208,15 @@ class GridTradingStrategy:
         """可视化策略执行"""
         plt.figure(figsize=(24,12))
         plt.plot(self.data['date'], self.data['close'], label='Price')
-        plt.plot(self.data['date'], self.ub['lower_band'], label='Lower')
-        plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
-        plt.plot(self.data['date'], self.ub['sda'], label='sda')
-        plt.plot(self.data['date'], self.ub['sma'], label='sma')
-        plt.plot(self.data['date'], self.ub['rsi'], label='rsi')
-        plt.plot(self.data['date'], self.ub['macd']*10, label='macd')
-        plt.plot(self.data['date'], self.ub['signal']*10, label='signal')
-        plt.plot(self.data['date'], self.ub['hist']*10, label='hist')
-        plt.plot(self.data['date'], self.ub['hist_diff']*10, label='hist_diff')
+        # plt.plot(self.data['date'], self.ub['lower_band'], label='Lower')
+        # plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
+        # plt.plot(self.data['date'], self.ub['sda'], label='sda')
+        # plt.plot(self.data['date'], self.ub['sma'], label='sma')
+        # plt.plot(self.data['date'], self.ub['rsi'], label='rsi')
+        # plt.plot(self.data['date'], self.ub['macd']*10, label='macd')
+        # plt.plot(self.data['date'], self.ub['signal']*10, label='signal')
+        # plt.plot(self.data['date'], self.ub['hist']*10, label='hist')
+        # plt.plot(self.data['date'], self.ub['hist_diff']*10, label='hist_diff')
 
         plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
         plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')

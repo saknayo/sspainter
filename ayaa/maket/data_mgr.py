@@ -86,6 +86,18 @@ class DataMgr:
         print(f"Query result: {len(df)} records found.")
         return df
 
+    def fetch_all_data_from_db(self, t, symbol):
+        """从本地数据库获取数据"""
+        with sqlite3.connect(self._dbf) as conn:
+            query = f"""
+                SELECT * FROM {self._dbt[t]} 
+                WHERE symbol = ?  """
+            df = pd.read_sql_query(query, conn, params=(symbol,))
+        
+        # 打印查询结果
+        #print(f"Query result: {len(df)} records found.")
+        return df
+
     def save_data_to_db(self, t, symbol, data):
         if data.empty:
             return
@@ -108,6 +120,9 @@ class DataMgr:
                 print(f"Inserted {len(data_to_insert)} new records into the database.")
             else:
                 print("No new records to insert.")
+
+    def fetch_all_daily_stock_data(self, t, symbol):
+        return self.fetch_all_data_from_db(t, symbol)
 
     def fetch_daily_stock_data(self, t, symbol, start_date, end_date):
         """
