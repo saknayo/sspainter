@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 from ayaa.strategy.finance_mgr import FinanceMgr
 from ayaa.utils.perf import calculate_bollinger_bands, calculate_perf
 
@@ -125,42 +126,10 @@ class GridTradingStrategy:
                 'quantity' : real_quantity,
                 'type' : stype,
             })
- 
-    '''def execute_strategy(self, current_date, current_price):
-        """执行策略"""
-        quantity = 0
-        
-        # 检查每个网格线
-        for level in self.grid_levels:
-            # 买入条件：价格低于网格线且未持仓
-            if current_price <= level:
-                order_qty = self.calculate_order_size(current_price)
-                quantity += order_qty
-            # 卖出条件：价格高于网格线且有持仓
-            if current_price >= level:
-                order_qty = self.calculate_order_size(current_price)
-                quantity -= order_qty
 
-        real_quantity = 0
-        stype = ''
-        if quantity > 1:
-            real_quantity = self.financer.buy(current_date, current_price, abs(quantity))
-            stype = 'BUY'
-        if quantity < -1:
-            real_quantity = self.financer.sell(current_date, current_price, abs(quantity))
-            stype = 'SELL'
-        if real_quantity > 1:
-            # print(f'date : {current_date} price : {current_price} quantity  : {real_quantity} type  : {stype}')
-            self.positions.append({
-                'date': current_date,
-                'price': current_price,
-                'quantity' : real_quantity,
-                'type' : stype,
-            })'''
     def backtest(self, symbol, data):
         self.symbol = symbol
         self.data = data
-        # self.ub = calculate_bollinger_bands(data, window=60, num_std=5, price_col='close', fill_na=True)
         self.prepare_data(data)
         for idx, row in data.iterrows():
             self.build_strategy(row)
@@ -208,15 +177,15 @@ class GridTradingStrategy:
         """可视化策略执行"""
         plt.figure(figsize=(24,12))
         plt.plot(self.data['date'], self.data['close'], label='Price')
-        # plt.plot(self.data['date'], self.ub['lower_band'], label='Lower')
-        # plt.plot(self.data['date'], self.ub['upper_band'], label='Upper')
-        # plt.plot(self.data['date'], self.ub['sda'], label='sda')
-        # plt.plot(self.data['date'], self.ub['sma'], label='sma')
-        # plt.plot(self.data['date'], self.ub['rsi'], label='rsi')
-        # plt.plot(self.data['date'], self.ub['macd']*10, label='macd')
-        # plt.plot(self.data['date'], self.ub['signal']*10, label='signal')
-        # plt.plot(self.data['date'], self.ub['hist']*10, label='hist')
-        # plt.plot(self.data['date'], self.ub['hist_diff']*10, label='hist_diff')
+        plt.plot(self.data['date'], self.data['lower_band'], label='Lower')
+        plt.plot(self.data['date'], self.data['upper_band'], label='Upper')
+        plt.plot(self.data['date'], self.data['sda'], label='sda')
+        plt.plot(self.data['date'], self.data['sma'], label='sma')
+        plt.plot(self.data['date'], self.data['rsi'], label='rsi')
+        plt.plot(self.data['date'], self.data['macd']*10, label='macd')
+        plt.plot(self.data['date'], self.data['signal']*10, label='signal')
+        plt.plot(self.data['date'], self.data['hist']*10, label='hist')
+        # plt.plot(self.data['date'], self.data['hist_diff']*10, label='hist_diff')
 
         plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
         plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
@@ -243,6 +212,7 @@ class GridTradingStrategy:
             plt.axhline(y=level, color='gray', linestyle='--', alpha=0.5)
             
         plt.title('Grid Trading Strategy')
+        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(len(self.data)/10))
         plt.legend()
         plt.savefig(f'misc/{self.symbol}.jpg', dpi = 200)
         # plt.show()
