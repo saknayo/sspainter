@@ -73,7 +73,7 @@ def evalution(spara):
     filter = ['symbol', 'diff', 'profit', 'amper', 'trade_times']
     fres =[{k:d[k] for k in filter} for d in res]
     #print(tabulate(fres, headers="keys", tablefmt="grid"))
-    return stats(res, length) / 100
+    return stats(res, length)
 
 
 def create_objective(eval_func, param_space: Dict[str, Any]):
@@ -133,13 +133,13 @@ if __name__ == '__main__':
         },
         'u_num_std': {
             'type': 'float',
-            'low': 0.2,
+            'low': 2,
             'high': 10,
             'log': True  # 对数尺度采样
         },
         'l_num_std': {
             'type': 'float',
-            'low': 0.2,
+            'low': 2,
             'high': 10,
             'log': True  # 对数尺度采样
         },
@@ -158,33 +158,33 @@ if __name__ == '__main__':
         'max_width': {
             'type': 'float',
             'low': 0.1,
-            'high': 1.0,
+            'high': 0.1,
             'log': True  # 对数尺度采样
         },
         'min_width': {
             'type': 'float',
             'low': 0.1,
-            'high': 1.0,
+            'high': 0.1,
             'log': True  # 对数尺度采样
         },
         'grid_num': {
             'type': 'int',
-            'low': 3,
-            'high': 15
+            'low': 10,
+            'high': 10 
         },
         'window': {
             'type': 'int',
-            'low': 5,
-            'high': 90
+            'low': 60,
+            'high': 60
         },
     }
 
 
 
     # 执行优化
-    study = optuna.create_study(direction='maximize', study_name="r2-total-avg", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
+    study = optuna.create_study(direction='maximize', study_name="r3-total_avg-num_std-sbc", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
     objective = create_objective(evalution, HYPERPARAM_SPACE)
-    study.optimize(objective, n_trials=3000)
+    study.optimize(objective, n_trials=500)
 
     # 输出结果
     print(f"最佳参数: {study.best_params}")

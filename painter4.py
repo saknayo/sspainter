@@ -92,6 +92,10 @@ if __name__ == '__main__':
     }
     spara = {'max_holding_ration': 0.8, 'order_percent': 0.16906228159872866, 'u_num_std': 0.20060052911467804, 'l_num_std': 6.8878886392475005, 
     'u_sbc5': 1.775046498978191, 'l_sbc5': 7.278347871528191, 'max_width': 0.7997296468545225, 'min_width': 0.15540867980513814, 'grid_num': 15, 'window': 81}
+    # r3-total_avg-num_std-sbc
+    # [I 2025-03-30 18:29:31,058] Trial 93 finished with value: 3.936108227230945 and parameters: 
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.1377678930628302, 'u_num_std': 2.257133984723932, 'l_num_std': 8.823753694502832, 
+     'u_sbc5': 0.5477913042862884, 'l_sbc5': 6.200430538876671, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
 
     # 执行优化
     evalution(spara)
