@@ -55,7 +55,7 @@ def evalution(spara):
 
     res = []
     symbol_num = 10
-    length = 360
+    length = 560
     batch_num = 1
 
     # symbol_list = get_fund_rank_list(symbol_num)
@@ -96,6 +96,10 @@ if __name__ == '__main__':
     # [I 2025-03-30 18:29:31,058] Trial 93 finished with value: 3.936108227230945 and parameters: 
     spara = {'max_holding_ration': 0.8, 'order_percent': 0.1377678930628302, 'u_num_std': 2.257133984723932, 'l_num_std': 8.823753694502832, 
      'u_sbc5': 0.5477913042862884, 'l_sbc5': 6.200430538876671, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
+    # I 2025-03-30 18:50:39,025] Trial 21 finished with value: 2.865734351218135 and parameters: 
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.034003568375669216, 'num_std': 9.332545390458101, 'sbc5': 1.4332153491082669, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
+    #[I 2025-03-31 05:47:47,199] Trial 672 finish      ed with value: 4.161163345144168 and paramet      ers: 
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.1497684498726134, 'num_std': 3.241974529357782, 'sbc5': 1.5836400879401857, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
 
     # 执行优化
     evalution(spara)

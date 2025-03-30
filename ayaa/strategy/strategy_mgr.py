@@ -1,4 +1,4 @@
-from ayaa.strategy.grid_strategy import GridTradingStrategy
+from ayaa.strategy.gridl_strategy import GridTradingStrategy
 from ayaa.strategy.shan_strategy import ShanTradingStrategy
 
 class StrategyMgr:

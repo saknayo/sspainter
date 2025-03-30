@@ -173,4 +173,9 @@
 +----------+-----------+-----------+---------------+
 
 
-[I 2025-03-30 03:17:31,080] Trial 806 finished with value: 0.0568492862981378 and parameters: {'max_holding_ration': 0.8, 'order_percent': 0.16906228159872866, 'u_num_std': 0.20060052911467804, 'l_num_std': 6.8878886392475005, 'u_sbc5': 1.775046498978191, 'l_sbc5': 7.278347871528191, 'max_width': 0.7997296468545225, 'min_width': 0.15540867980513814, 'grid_num': 15, 'w      indow': 81}. Best is trial 806 with value: 0.0568492862981378.
+[I 2025-03-30 03:17:31,080] Trial 806 finished with value: 0.0568492862981378 and parameters: 
+{'max_holding_ration': 0.8, 'order_percent': 0.16906228159872866, 'u_num_std': 0.20060052911467804, 'l_num_std': 6.8878886392475005, 
+'u_sbc5': 1.775046498978191, 'l_sbc5': 7.278347871528191, 'max_width': 0.7997296468545225, 'min_width': 0.15540867980513814, 'grid_num': 15, 'window': 81}.
+ Best is trial 806 with value: 0.0568492862981378.
+
+sudo kill 403752 403790 403803 403813 403823 403833 403844 403856

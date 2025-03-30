@@ -49,15 +49,15 @@ class GridTradingStrategy:
         data:[[date price], [date price]...]'''
         calculate_perf(data, window=self.spara['window'], price_col='close', fill_na=True)
         # 计算上下轨
-        data['min_width'] = data['sma'] * self.spara['min_width'] / self.spara['l_num_std']
-        data['max_width'] = data['sma'] * self.spara['max_width'] / self.spara['u_num_std']
+        data['min_width'] = data['sma'] * self.spara['min_width'] / self.spara['num_std']
+        data['max_width'] = data['sma'] * self.spara['max_width'] / self.spara['num_std']
         data['fluct'] = data[['max_width', 'sda']].min(axis=1)
         data['fluct'] = data[['min_width', 'fluct']].max(axis=1)
         #fluct = data['fluct']
         fluct = data['sda']
      
-        data['upper_band'] = data['sma'] + (fluct*self.spara['u_num_std']) + data['sbc5']*self.spara['u_sbc5']
-        data['lower_band'] = data['sma'] - (fluct*self.spara['l_num_std']) + data['sbc5']*self.spara['l_sbc5']
+        data['upper_band'] = data['sma'] + (fluct*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
+        data['lower_band'] = data['sma'] - (fluct*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
 
 
     def build_strategy(self, data):
@@ -175,33 +175,36 @@ class GridTradingStrategy:
     
     def visualize_strategy(self):
         """可视化策略执行"""
-        plt.figure(figsize=(24,12))
-        plt.plot(self.data['date'], self.data['close'], label='Price')
-        plt.plot(self.data['date'], self.data['lower_band'], label='Lower')
-        plt.plot(self.data['date'], self.data['upper_band'], label='Upper')
-        plt.plot(self.data['date'], self.data['sda'], label='sda')
-        plt.plot(self.data['date'], self.data['sma'], label='sma')
-        plt.plot(self.data['date'], self.data['rsi'], label='rsi')
-        plt.plot(self.data['date'], self.data['macd']*10, label='macd')
-        plt.plot(self.data['date'], self.data['signal']*10, label='signal')
-        plt.plot(self.data['date'], self.data['hist']*10, label='hist')
+        fig, (ax1, ax2) = plt.subplots(2)
+        fig.set_size_inches(24,12)
+        # plt.figure(figsize=(24,12))
+        ax1.plot(self.data['date'], self.data['close'], label='Price')
+        ax1.plot(self.data['date'], self.data['lower_band'], label='Lower')
+        ax1.plot(self.data['date'], self.data['upper_band'], label='Upper')
+        ax1.plot(self.data['date'], self.data['sma'], label='sma')
+        ax2.plot(self.data['date'], self.data['sda'], label='sda')
+        ax2.plot(self.data['date'], self.data['rsi'], label='rsi')
+        ax2.plot(self.data['date'], self.data['macd']*10, label='macd')
+        ax2.plot(self.data['date'], self.data['macd_diff']*100, label='macd_diff')
+        ax2.plot(self.data['date'], self.data['signal']*10, label='signal')
+        ax2.plot(self.data['date'], self.data['hist']*100, label='hist')
         # plt.plot(self.data['date'], self.data['hist_diff']*10, label='hist_diff')
 
-        plt.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
-        plt.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
-        plt.axhline(y=0, color="black", linestyle=":")
-        plt.axhline(y=1, color="black", linestyle=":")
+        ax2.plot([i['date'] for i in self.holding_rations], [i['ration'] for i in self.holding_rations], label='Holding Ration')
+        ax2.plot([i['date'] for i in self.holding_rations], [i['profit'] for i in self.holding_rations], label='Profit')
+        ax2.axhline(y=0, color="black", linestyle=":")
+        ax2.axhline(y=1, color="black", linestyle=":")
         
         # 绘制买卖点
         buys = [t for t in self.positions if t['type'] == 'BUY']
         sells = [t for t in self.positions if t['type'] == 'SELL']
         
-        plt.scatter(
+        ax1.scatter(
             [b['date'] for b in buys],
             [b['price'] for b in buys],
             color='green', marker='^', label='Buy'
         )
-        plt.scatter(
+        ax1.scatter(
             [s['date'] for s in sells],
             [s['price'] for s in sells],
             color='red', marker='v', label='Sell'
@@ -209,12 +212,17 @@ class GridTradingStrategy:
         
         # 绘制网格线
         for level in self.grid_levels:
-            plt.axhline(y=level, color='gray', linestyle='--', alpha=0.5)
+            ax1.axhline(y=level, color='gray', linestyle='--', alpha=0.5)
             
-        plt.title('Grid Trading Strategy')
-        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(len(self.data)/10))
-        plt.legend()
-        plt.savefig(f'misc/{self.symbol}.jpg', dpi = 200)
+        fig.suptitle('Grid Trading Strategy')
+        # fig.legend()
+        ax1.xaxis.set_major_locator(ticker.MultipleLocator(len(self.data)/10))
+        ax1.legend()
+
+        # ax2.title('Grid Trading Strategy')
+        ax2.xaxis.set_major_locator(ticker.MultipleLocator(len(self.data)/10))
+        ax2.legend()
+        fig.savefig(f'misc/{self.symbol}.jpg', dpi = 200)
         # plt.show()
 
 # 使用示例

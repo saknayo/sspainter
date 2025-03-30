@@ -131,25 +131,13 @@ if __name__ == '__main__':
             'high': 0.20,
             'log': True  # 对数尺度采样
         },
-        'u_num_std': {
+        'num_std': {
             'type': 'float',
             'low': 2,
             'high': 10,
             'log': True  # 对数尺度采样
         },
-        'l_num_std': {
-            'type': 'float',
-            'low': 2,
-            'high': 10,
-            'log': True  # 对数尺度采样
-        },
-        'u_sbc5': {
-            'type': 'float',
-            'low': 0.1,
-            'high': 10,
-            'log': True  # 对数尺度采样
-        },
-        'l_sbc5': {
+        'sbc5': {
             'type': 'float',
             'low': 0.1,
             'high': 10,
@@ -182,7 +170,7 @@ if __name__ == '__main__':
 
 
     # 执行优化
-    study = optuna.create_study(direction='maximize', study_name="r3-total_avg-num_std-sbc", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
+    study = optuna.create_study(direction='maximize', study_name="r5-total_avg-slowmacd", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
     objective = create_objective(evalution, HYPERPARAM_SPACE)
     study.optimize(objective, n_trials=500)
 

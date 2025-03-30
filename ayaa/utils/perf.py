@@ -24,6 +24,8 @@ def calculate_perf(data, window, price_col='close', fill_na=False):
     df['rsi'] = talib.RSI(df[price_col], timeperiod=14) / 100
     df['macd'], df['signal'], df['hist'] = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
     # df['hist_diff'] = np.diff(df['hist'], prepend=df['hist'][0])
+    # df['macd_diff'] = np.diff(df['macd'], prepend=df['macd'][0])
+    df['macd_diff'] = np.diff(df['macd'], prepend=0)
     # 计算标准差
     df['sda'] = df[price_col].rolling(window=window).std()
     rolling_std = df[price_col].rolling(window=window).std()
