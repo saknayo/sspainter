@@ -1,4 +1,5 @@
 from tabulate import tabulate
+from datetime import datetime
 import optuna
 from typing import Dict, Any
 from functools import lru_cache
@@ -46,6 +47,35 @@ def stats(res, period):
     #return np.mean([finnal[0]['avg'], finnal[1]['avg'], finnal[2]['avg']])
     return finnal[-1]['avg']
 
+def evalution_daily(spara):
+    init_cash = 100000
+
+    dmgr = DataMgr()
+    smgr = StrategyMgr()
+    trader = TraderC(dmgr, smgr)
+
+    res = []
+    symbol_num = 10
+    length = 360
+    batch_num = 1
+
+    # symbol_list = get_fund_rank_list(symbol_num)
+    symbol_list = ["004685", "017436", "005939", "501010", "501048", "161122", "320007", "018124", "005827", '270042', '017436', '006265']
+    now_date = datetime.now().date().strftime('%Y-%m-%d')
+    collect_data(dmgr, symbol_list, "2024-01-01", now_date)
+    #exit(0)
+    for symbol in symbol_list:
+        data = dmgr.fetch_all_daily_stock_data('fund', symbol)
+        # daily test
+        trader.set_profile(symbol, init_cash)
+        res.append(trader.auto_backtest(spara, symbol, data, visualize=True))
+        continue
+    [r.update({'diff':r['profit']-r['amper']}) for r in res]
+    filter = ['symbol', 'diff', 'profit', 'amper', 'trade_times']
+    fres =[{k:d[k] for k in filter} for d in res]
+    print(tabulate(fres, headers="keys", tablefmt="grid"))
+    return stats(res, length) / 100
+
 def evalution(spara):
     init_cash = 100000
 
@@ -55,12 +85,12 @@ def evalution(spara):
 
     res = []
     symbol_num = 10
-    length = 560
+    length = 360
     batch_num = 1
 
     # symbol_list = get_fund_rank_list(symbol_num)
-    symbol_list = ["004685", "017436", "005939", "501010", "501048", "161122", "320007", "018124", "005827", '270042']
-    #collect_data(dmgr, symbol_list, "2001-01-01", "2025-03-03")
+    symbol_list = ["004685", "017436", "005939", "501010", "501048", "161122", "320007", "018124", "005827", '270042', '017436', '006265']
+    #collect_data(dmgr, symbol_list, "2004-01-01", "2025-04-01")
     #exit(0)
     for symbol in symbol_list:
         data = dmgr.fetch_all_daily_stock_data('fund', symbol)
@@ -100,7 +130,12 @@ if __name__ == '__main__':
     spara = {'max_holding_ration': 0.8, 'order_percent': 0.034003568375669216, 'num_std': 9.332545390458101, 'sbc5': 1.4332153491082669, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
     #[I 2025-03-31 05:47:47,199] Trial 672 finish      ed with value: 4.161163345144168 and paramet      ers: 
     spara = {'max_holding_ration': 0.8, 'order_percent': 0.1497684498726134, 'num_std': 3.241974529357782, 'sbc5': 1.5836400879401857, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60}
+    # r6-fix-total_avg-slowmacd
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.040980300026245815, 'num_std': 4.5989271586695075, 'sbc5': 0.49719741832318604, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60, 'fast_win': 59, 'slow_win': 35, 'sig_win': 33}
+    # Trial 2135 finished with value: 2.500679601927987 and parameters: 
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.05652456325504556, 'num_std': 7.176714081586621, 'sbc5': 7.819711162106609, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60, 'fast_win': 31, 'slow_win': 53, 'sig_win': 49}
 
     # 执行优化
-    evalution(spara)
+    #evalution(spara)
+    evalution_daily(spara)
 

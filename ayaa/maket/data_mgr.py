@@ -27,6 +27,8 @@ class DataMgr:
 
     def trans_date(self, unstrip_data):
         # 将日期格式从 YYYYMMDD 转换为 YYYY-MM-DD
+        if unstrip_data.count('-') == 2:
+            return unstrip_data
         return f"{unstrip_data[:4]}-{unstrip_data[4:6]}-{unstrip_data[6:8]}"
 
     def init_share_db(self):
@@ -69,6 +71,7 @@ class DataMgr:
     def fetch_data_from_db(self, t, symbol, start_date, end_date):
         """从本地数据库获取数据"""
         # 将日期格式从 YYYYMMDD 转换为 YYYY-MM-DD
+        print(f"Querying database for Symbol: {symbol}, Start Date: {start_date}, End Date: {end_date}")
         start_date = self.trans_date(start_date)
         end_date = self.trans_date(end_date)
         
@@ -136,6 +139,7 @@ class DataMgr:
         if not db_data.empty:
             # 获取数据库中的最新日期
             latest_date_in_db = db_data["date"].max()
+            print(db_data["date"])
             
             # 如果数据库中的最新日期等于 end_date，直接返回数据库数据
             if latest_date_in_db == self.trans_date(end_date):

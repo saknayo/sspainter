@@ -1,4 +1,5 @@
 from tabulate import tabulate
+import time
 import optuna
 from typing import Dict, Any
 from functools import lru_cache
@@ -7,14 +8,21 @@ from ayaa.maket.data_mgr import DataMgr
 from ayaa.strategy.strategy_mgr import StrategyMgr
 from ayaa.trader.trader_a import TraderA
 from ayaa.trader.trader_c import TraderC
+import akshare as ak
 
 @lru_cache(maxsize=10)
-def get_fund_rank_list(select_num):
-    import akshare as ak
+def get_fund_rank_list(select_num, dmgr, least_period=-1):
     fund_open_fund_rank_em_df = ak.fund_open_fund_rank_em(symbol="全部")
-    # print(fund_open_fund_rank_em_df)
+    fund_open_fund_rank_em_df['num'] = [len(dmgr.fetch_all_daily_stock_data('fund', symbol)) for symbol in fund_open_fund_rank_em_df['基金代码']]
+    #   print(symbol)
+    #   symbol['num'] = len(dmgr.fetch_all_daily_stock_data('fund', symbol['基金代码']))
+    targets = fund_open_fund_rank_em_df.loc[(fund_open_fund_rank_em_df['num'] >= least_period)]
+    targets = targets['基金代码']
+    print(f'filter {len(targets)} from {len(fund_open_fund_rank_em_df)}, select {select_num}')
     # print(fund_open_fund_rank_em_df['基金代码'])
-    return fund_open_fund_rank_em_df['基金代码'][np.random.choice(len(fund_open_fund_rank_em_df), select_num)]
+    return np.random.choice(targets,  select_num)
+    #return targets[np.random.choice(len(targets), select_num)]
+    #return targets['基金代码'][np.random.choice(len(targets), select_num)]
 
 
 def generate_test_batch(data, length, batch_num):
@@ -28,6 +36,7 @@ def generate_test_batch(data, length, batch_num):
 def collect_data(dm, symbols, start_date, end_date):
     for syb in symbols:
         dm.fetch_daily_stock_data('fund', syb, start_date, end_date)
+        time.sleep(1)
 
 def stats(res, period):
     ''' 按照涨跌幅大于5% 小于-5%，以及介于两者之间分三类统计，并计算平均盈利率 '''
@@ -44,7 +53,9 @@ def stats(res, period):
     finnal = [{'name':k, 'avg':np.mean(s), 'num':len(s)} for k, s in stats_res.items()]
     print(tabulate(finnal, headers="keys", tablefmt="grid"))
     #return np.mean([finnal[0]['avg'], finnal[1]['avg'], finnal[2]['avg']])
-    return finnal[-1]['avg']
+    #return finnal[1]['avg']
+    #return finnal[-1]['avg']
+    return np.mean([r['profit'] for r in res])
 
 def evalution(spara):
     init_cash = 100000
@@ -56,9 +67,9 @@ def evalution(spara):
     res = []
     symbol_num = 100
     length = 360
-    batch_num = 30
+    batch_num = 10
 
-    symbol_list = get_fund_rank_list(symbol_num)
+    symbol_list = get_fund_rank_list(symbol_num, dmgr, least_period=length+batch_num)
     #collect_data(dmgr, symbol_list, "2001-01-01", "2025-03-03")
     #exit(0)
     for symbol in symbol_list:
@@ -165,12 +176,28 @@ if __name__ == '__main__':
             'low': 60,
             'high': 60
         },
+        'fast_win': {
+            'type': 'int',
+            'low': 3,
+            'high': 60
+        },
+        'slow_win': {
+            'type': 'int',
+            'low': 3,
+            'high': 60
+        },
+        'sig_win': {
+            'type': 'int',
+            'low': 3,
+            'high': 60
+        },
+ 
     }
 
 
 
     # 执行优化
-    study = optuna.create_study(direction='maximize', study_name="r5-total_avg-slowmacd", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
+    study = optuna.create_study(direction='maximize', study_name="r7-absprofit-total_avg-slowmacd", storage="mysql+pymysql://root:12345678@localhost/foo", load_if_exists=True)
     objective = create_objective(evalution, HYPERPARAM_SPACE)
     study.optimize(objective, n_trials=500)
 

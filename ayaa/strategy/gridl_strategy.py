@@ -49,7 +49,7 @@ class GridTradingStrategy:
     def prepare_data(self, data):
         ''' data包含一段时间内的基础数据，如date、close等其他所需
         data:[[date price], [date price]...]'''
-        calculate_perf(data, window=self.spara['window'], price_col='close', fill_na=True)
+        calculate_perf(data, window=self.spara['window'], price_col='close', fast_win=self.spara['fast_win'], slow_win=self.spara['slow_win'], sig_win=self.spara['sig_win'], fill_na=True)
         # 计算上下轨
         data['min_width'] = data['sma'] * self.spara['min_width'] / self.spara['num_std']
         data['max_width'] = data['sma'] * self.spara['max_width'] / self.spara['num_std']
@@ -60,6 +60,8 @@ class GridTradingStrategy:
      
         data['upper_band'] = data['sma'] + (fluct*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
         data['lower_band'] = data['sma'] - (fluct*self.spara['num_std']) + data['sbc5']*self.spara['sbc5']
+        #data['upper_band'] = data['sma'] * 1.5
+        #data['lower_band'] = data['sma'] * 0.5
 
 
     def build_strategy(self, data):
@@ -92,6 +94,55 @@ class GridTradingStrategy:
         return (self.financer.init_cash * self.grid_params['order_percent']) / price
 
     def execute_strategy(self, current_date, current_price, current_data):
+        """执行策略"""
+        quantity = 0
+        current_grid = np.digitize(current_price, self.grid_levels)
+        self.last_trade_time += 1
+        
+        if self.last_macd < 0 and current_data['macd_diff'] >= 0:
+            signal = 'buy'
+        elif self.last_macd > 0 and current_data['macd_diff'] <= 0:
+            signal = 'sell'
+        else:
+            signal =''
+
+
+        if current_grid != self.last_grid and signal:
+            self.last_grid = current_grid
+            self.last_trade_time = 0
+
+            # 检查每个网格线
+            for level in self.grid_levels:
+                # 买入条件：价格低于网格线且未持仓
+                if current_price <= level:
+                    order_qty = self.calculate_order_size(current_price)
+                    quantity += order_qty
+                # 卖出条件：价格高于网格线且有持仓
+                if current_price >= level:
+                    order_qty = self.calculate_order_size(current_price)
+                    quantity -= order_qty
+
+        self.last_macd = current_data['macd_diff']
+
+        real_quantity = 0
+        stype = ''
+        if quantity > 1:
+            real_quantity = self.financer.buy(current_date, current_price, abs(quantity))
+            stype = 'BUY'
+        if quantity < -1:
+            real_quantity = self.financer.sell(current_date, current_price, abs(quantity))
+            stype = 'SELL'
+        if real_quantity > 1:
+            # print(f'date : {current_date} price : {current_price} quantity  : {real_quantity} type  : {stype}')
+            self.positions.append({
+                'date': current_date,
+                'price': current_price,
+                'quantity' : real_quantity,
+                'type' : stype,
+            })
+
+
+    def execute_strategy2(self, current_date, current_price, current_data):
         """执行策略"""
         quantity = 0
         current_grid = np.digitize(current_price, self.grid_levels)
@@ -164,6 +215,7 @@ class GridTradingStrategy:
         # 计算最终资产
         final_value = self.financer.get_total_value(self.data['close'].iloc[-1])
         total_return = self.financer.get_profit(self.data['close'].iloc[-1])
+        avg_profit = np.mean([i['profit'] for i in self.holding_rations]) 
         
         # 统计交易数据
         trades = pd.DataFrame(self.positions)
@@ -184,6 +236,7 @@ class GridTradingStrategy:
             "init_cash" : self.financer.init_cash,
             "final_cash" : final_value,
             "profit" : total_return*100,
+            "avg_profit" : avg_profit,
             "holding" : self.financer.total_holding,
             "trade_times" : f'{len(trades)}/{len(self.data)}',
             # "sell_buy" : len(win_trades)/len(trades),

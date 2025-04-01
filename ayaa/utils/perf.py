@@ -2,7 +2,7 @@ import pandas as pd
 import talib
 import numpy as np
 
-def calculate_perf(data, window, price_col='close', fill_na=False):
+def calculate_perf(data, window, price_col='close', fast_win=12, slow_win=26, sig_win=9, fill_na=False):
     """
     计算布林通道
     参数：
@@ -22,7 +22,7 @@ def calculate_perf(data, window, price_col='close', fill_na=False):
     df['sbc5n'] = df['sbc5'].apply(lambda x : x if x < 0 else 0)
 
     df['rsi'] = talib.RSI(df[price_col], timeperiod=14) / 100
-    df['macd'], df['signal'], df['hist'] = talib.MACD(df[price_col], fastperiod=12, slowperiod=26, signalperiod=9)
+    df['macd'], df['signal'], df['hist'] = talib.MACD(df[price_col], fastperiod=fast_win, slowperiod=slow_win, signalperiod=sig_win)
     # df['hist_diff'] = np.diff(df['hist'], prepend=df['hist'][0])
     # df['macd_diff'] = np.diff(df['macd'], prepend=df['macd'][0])
     df['macd_diff'] = np.diff(df['macd'], prepend=0)
