@@ -133,7 +133,7 @@ if __name__ == '__main__':
     # r6-fix-total_avg-slowmacd
     spara = {'max_holding_ration': 0.8, 'order_percent': 0.040980300026245815, 'num_std': 4.5989271586695075, 'sbc5': 0.49719741832318604, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60, 'fast_win': 59, 'slow_win': 35, 'sig_win': 33}
     # Trial 2135 finished with value: 2.500679601927987 and parameters: 
-    spara = {'max_holding_ration': 0.8, 'order_percent': 0.05652456325504556, 'num_std': 7.176714081586621, 'sbc5': 7.819711162106609, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60, 'fast_win': 31, 'slow_win': 53, 'sig_win': 49}
+    spara = {'max_holding_ration': 0.8, 'order_percent': 0.05652456325504556, 'num_std': 5.176714081586621, 'sbc5': 2.819711162106609, 'max_width': 0.1, 'min_width': 0.1, 'grid_num': 10, 'window': 60, 'fast_win': 10, 'slow_win': 20, 'sig_win': 7}
 
     # 执行优化
     #evalution(spara)
